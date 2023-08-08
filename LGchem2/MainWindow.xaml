@@ -9,15 +9,15 @@
         WindowStartupLocation="CenterScreen"
         UseLayoutRounding="True"
         ResizeMode="CanMinimize">
-    <StackPanel Margin="10 10 10 10">
-        <TabControl>
+    <Grid Margin="10 10 10 10">
+        <TabControl HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
             <TabItem Header="메인">
-                <StackPanel Margin="0 10 0 0">
+                <StackPanel Margin="0 15 0 0">
                     <StackPanel Orientation="Horizontal">
                         <Button x:Name="btn_select_pdf" Content="PDF 파일 선택" 
                                 Margin="5 0 0 0" Width="100" Height="25"                      
-                                Background="Ivory"         
-                                HorizontalAlignment="Left"    
+                                Background="Ivory"
+                                HorizontalAlignment="Left"
                                 UseLayoutRounding="True"
                                 Click="btn_select_pdf_Click">
                             <Button.Effect>
@@ -36,6 +36,17 @@
                             </Button.Effect>
                         </Button>
 
+                        <Button x:Name="btn_result" Content="결과 폴더" 
+                                Margin="20 0 0 0" Width="100" Height="25"                      
+                                Background="Ivory"        
+                                HorizontalAlignment="Left"   
+                                
+                                UseLayoutRounding="True">
+                            <Button.Effect>
+                                <DropShadowEffect ShadowDepth="2" Direction="315" Color="Black" Opacity="0.5"/>
+                            </Button.Effect>
+                        </Button>
+
                         <Grid Margin="20 0 0 0">
                             <ProgressBar x:Name="pgb_run" Width="150" Height="25" Minimum="0" Maximum="100" Value="0" 
                                  HorizontalAlignment="Left"/>
@@ -45,7 +56,7 @@
                     </StackPanel>
 
                     <Grid>
-                        <ListView Name="list_pdf" Margin="5 5 10 0" ItemsSource="{Binding}"
+                        <ListView Name="list_pdf" Margin="5 15 10 0" ItemsSource="{Binding}"
                                   SelectionMode="Extended" Height="375">
                             <ListView.View>
                                 <GridView>
@@ -54,7 +65,12 @@
                                 </GridView>
                             </ListView.View>
                         </ListView>
-                    </Grid>                    
+                    </Grid>
+
+                    <StackPanel Orientation="Horizontal" Margin="0 10 0 0">
+                        <Label Content="RRT 한계값"/>
+                        <TextBox x:Name="tb_rrt_limit" Width="100" Text="0.015" VerticalContentAlignment="Center" FontSize="15" Margin="10 0 0 0"/>
+                    </StackPanel>
 
                 </StackPanel>
             </TabItem>
@@ -62,5 +78,5 @@
                 
             </TabItem>
         </TabControl>
-    </StackPanel>
+    </Grid>
 </Window>
