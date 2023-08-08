@@ -1,6 +1,7 @@
 ﻿using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -105,13 +106,12 @@ namespace LGchem2
             
             foreach (string path in list_path)
             {
-                
+                Debug.WriteLine("good");
             }
 
             Dispatcher.Invoke(DispatcherPriority.Normal, new Action(delegate
             {
                 this.pgb_run.IsIndeterminate = false;
-
             }));
         }
     }
