@@ -1,6 +1,7 @@
 ﻿using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -41,6 +42,11 @@ namespace LGchem2
 
             dic = new DirectoryInfo(ref_path);
             if (!dic.Exists) dic.Create();
+
+            //pdf test
+            string path = "C:\\Users\\USER\\Desktop\\코드\\sample.pdf";
+            MakeTable makeTable = new MakeTable();
+            DataTable dt = makeTable.Extract_Table(path);
         }
 
         private void btn_select_pdf_Click(object sender, RoutedEventArgs e)

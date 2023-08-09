@@ -23,26 +23,37 @@ namespace LGchem2
                 absorber.Visit(page);
                 foreach (AbsorbedTable table in absorber.TableList)
                 {
+                    int row_cnt = 0;                    
                     foreach (AbsorbedRow row in table.RowList)
                     {
+                        int col_cnt = 0;
+                        DataRow dr = dt_rst.NewRow();
                         foreach (AbsorbedCell cell in row.CellList)
                         {
                             TextFragment textfragment = new TextFragment();
                             TextFragmentCollection textFragmentCollection = cell.TextFragments;
+                            string txt = "";
                             foreach (TextFragment fragment in textFragmentCollection)
-                            {
-                                string txt = "";
+                            {                                
                                 foreach (TextSegment seg in fragment.Segments)
                                 {
                                     txt += seg.Text;
                                 }
-                                Debug.WriteLine(txt);
                             }
+                            if (row_cnt == 0) Global.AddColDt(dt_rst, txt);
+                            else
+                            {                                
+                                dr[col_cnt] = txt;                                
+                            }
+                            col_cnt++;
                         }
+                        if (row_cnt != 0) dt_rst.Rows.Add(dr);                        
+                        row_cnt++;
                     }
+                    
                 }
             }
-
+            
             return dt_rst;
         }
     }

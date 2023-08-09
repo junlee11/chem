@@ -102,5 +102,12 @@ namespace LGchem2
                 Debug.WriteLine(e);
             }
         }
+
+        public static void AddColDt(DataTable dt, string col)
+        {
+            DataColumn dataColumn = new DataColumn();
+            dataColumn.ColumnName = col;
+            dt.Columns.Add(dataColumn);
+        }
     }
 }
