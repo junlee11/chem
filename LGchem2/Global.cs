@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Aspose.Pdf;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
@@ -103,11 +104,60 @@ namespace LGchem2
             }
         }
 
-        public static void AddColDt(DataTable dt, string col)
+        public static void AddColDt(DataTable dt, string col, int cnt)
         {
-            DataColumn dataColumn = new DataColumn();
-            dataColumn.ColumnName = col;
-            dt.Columns.Add(dataColumn);
+            if (dt.Columns.Contains(col))
+            {
+                cnt++;
+                col = $"{col}_{cnt.ToString()}";
+                AddColDt(dt, col, cnt);
+            }
+            else
+            {
+                //신규 칼럼
+                DataColumn dataColumn = new DataColumn();
+                dataColumn.ColumnName = col;
+                dt.Columns.Add(dataColumn);
+            }
+        }
+
+        public static DataTable DelEmptyColumn(DataTable dt)
+        {
+            foreach (var column in dt.Columns.Cast<DataColumn>().ToArray())
+            {
+                if (dt.AsEnumerable().All(dr => dr.IsNull(column)))
+                //if (dt.AsEnumerable().All(dr => dr.ToString().Trim() == ""))
+                    dt.Columns.Remove(column);
+            }
+
+            return dt;
+        }
+
+        public static DataTable DelLittleRow(DataTable dt)
+        {
+            dt.AcceptChanges();
+            foreach (DataRow dr in dt.Rows)
+            {
+                int cnt = 0;
+                //데이터가 있는열이 1개 미만인 행은 제거
+                for (int i =0;i<dt.Columns.Count;i++)
+                {
+                    if (dr[i].ToString() != "") cnt++;
+                }
+                if (cnt <= 1) dr.Delete();
+            }
+            dt.AcceptChanges();
+
+            return dt;
+        }
+
+        public static double? VlookupDt(DataTable dt, double ref_val, string ref_col, string find_col)
+        {
+            foreach (DataRow dr in dt.Rows)
+            {
+                if (ref_val == double.Parse(dr[ref_col].ToString())) return double.Parse(dr[find_col].ToString());
+            }
+            return null;
         }
     }
 }

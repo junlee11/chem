@@ -19,6 +19,7 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using System.Windows.Threading;
 using Path = System.IO.Path;
+using Excel = Microsoft.Office.Interop.Excel;
 
 namespace LGchem2
 {
@@ -43,10 +44,28 @@ namespace LGchem2
             dic = new DirectoryInfo(ref_path);
             if (!dic.Exists) dic.Create();
 
-            //pdf test
-            string path = "C:\\Users\\USER\\Desktop\\코드\\sample.pdf";
-            MakeTable makeTable = new MakeTable();
-            DataTable dt = makeTable.Extract_Table(path);
+            ////pdf test
+            //string path = @"C:\Users\USER\Desktop\코드\lgchem_sample\230809\LG-008(W)\LG-008@008P23002@C[99.802%].pdf";
+
+            //MakeTable_LGD makeTable_LGD = new MakeTable_LGD();
+            //MakeTable_SDC makeTable_SDC = new MakeTable_SDC();
+            //MakeTableAll makeTableAll = new MakeTableAll();
+
+            //DataTable dt_raw = new DataTable();
+            //try
+            //{
+            //    dt_raw = makeTableAll.GetRawTable(makeTable_LGD, path);                
+            //}
+            //catch (System.IndexOutOfRangeException)
+            //{
+            //    dt_raw = makeTableAll.GetRawTable(makeTable_SDC, path);
+            //}
+            ////double형으로 변환
+            //dt_raw = makeTableAll.ConverDoubleTable(dt_raw);
+
+            ////RRT 테이블 생성
+            //dt_raw = makeTableAll.MakeRRTColumn(dt_raw);
+            
         }
 
         private void btn_select_pdf_Click(object sender, RoutedEventArgs e)
@@ -81,7 +100,12 @@ namespace LGchem2
         private void btn_run_Click(object sender, RoutedEventArgs e)
         {
             //인터락
-            if (this.list_pdf.SelectedItems.Count == 0) return;
+            if (this.list_pdf.SelectedItems.Count == 0)
+            {
+                MessageBox.Show("PDF 파일을 선택하세요");
+                return;
+            }
+                
             double rrt_limit;
             if (!Double.TryParse(this.tb_rrt_limit.Text, out rrt_limit))
             {
@@ -109,16 +133,46 @@ namespace LGchem2
             Dictionary<string, object>dic_src = (Dictionary<string, object>)o;
             double rrt_limit = (double)dic_src["rrt_limit"];
             List<string> list_path = (List<string>)dic_src["list_path"];
-            
+
+            //결과엑셀 파일 만들기
+            Excel.Application app = new Excel.Application();
+            Excel.Workbook wb = new Excel.Workbook();
+            app.Visible = true;            
+
+            //pdf 반복
             foreach (string path in list_path)
             {
                 Debug.WriteLine("good");
+
+                //1. pdf 변환
+                MakeTable_LGD makeTable_LGD = new MakeTable_LGD();
+                MakeTable_SDC makeTable_SDC = new MakeTable_SDC();
+                MakeTableAll makeTableAll = new MakeTableAll();
+
+                DataTable dt_raw = new DataTable();
+                try
+                {
+                    dt_raw = makeTableAll.GetRawTable(makeTable_LGD, path);
+                }
+                catch (System.IndexOutOfRangeException)
+                {
+                    dt_raw = makeTableAll.GetRawTable(makeTable_SDC, path);
+                }
+
+                //2. rrt 테이블
+
+                //3. pdf 첨부
             }
 
             Dispatcher.Invoke(DispatcherPriority.Normal, new Action(delegate
             {
                 this.pgb_run.IsIndeterminate = false;
             }));
+        }
+
+        private void btn_result_Click(object sender, RoutedEventArgs e)
+        {
+            Process.Start(result_path);
         }
     }
 }
