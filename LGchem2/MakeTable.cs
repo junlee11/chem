@@ -172,6 +172,11 @@ namespace LGchem2
 
     public class MakeTableAll
     {
+        private decimal De(string str)
+        {
+            return Decimal.Parse(str);
+        }
+
         public DataTable GetRawTable(ITable itable, string path)
         {
             DataTable dt = itable.Extract_Table(path);
@@ -187,10 +192,110 @@ namespace LGchem2
 
         public DataTable MakeImpurityTable(DataTable dt_raw, DataTable dt_ref, decimal limit)
         {
-            Global.print_DataTable(dt_raw);
-            Global.print_DataTable(dt_ref);
-
+            while (dt_ref.Rows.Count > 2) dt_ref.Rows.RemoveAt(2);
+            int? peak_idx = Global.VlookupDt_Int(dt_raw, Convert.ToDouble(dt_raw.AsEnumerable().Max(row => row["Area"])), "Area", "Index");
             DataTable dt_rst = new DataTable();
+
+            DataTable dt_abs = dt_ref.Clone();
+            foreach (DataRow dr in dt_raw.Rows)
+            {
+                //Peak 인덱스는 제외
+                if (dt_raw.Rows.IndexOf(dr) == peak_idx) continue;
+                DataRow new_dr = dt_abs.NewRow();
+                for (int i = 0;i<dt_ref.Columns.Count;i++)
+                {
+                    if (i == 0) new_dr[i] = "Index" + dt_raw.Rows.IndexOf(dr).ToString();
+                    else new_dr[i] = Math.Abs(De(dr["RRT"].ToString()) - De(dt_ref.Rows[1][i].ToString()));
+                }
+                dt_abs.Rows.Add(new_dr);
+            }
+
+            DataTable dt_absChk = dt_ref.Clone();
+            foreach (DataRow dr in dt_abs.Rows)
+            {
+                //Peak 인덱스는 제외
+                if (dt_abs.Rows.IndexOf(dr) == peak_idx) continue;
+                DataRow new_dr = dt_absChk.NewRow();
+                for (int i =0;i<dt_ref.Columns.Count; i++)
+                {
+                    if (i == 0) new_dr[i] = "Index" + dt_abs.Rows.IndexOf(dr).ToString();
+                    else new_dr[i] = (De(dr[i].ToString()) <= limit) ? dr[i].ToString() : "";
+                }
+                dt_absChk.Rows.Add(new_dr);
+            }
+
+            Global.print_DataTable(dt_abs);
+            Global.print_DataTable(dt_absChk);
+
+            DataTable dt_imp = dt_ref.Clone();
+            DataRow dr_imp = dt_imp.NewRow();
+            dt_imp.Rows.Add(dr_imp);
+            List<string> list_newImp = new List<string>();
+
+            //불순물정하기
+            foreach (DataRow dr in dt_absChk.Rows)
+            {
+                int row_cnt = 0;
+                int col_idx = 0;
+                for (int i = 0;i<dt_absChk.Columns.Count;i++)
+                {
+                    if (dr[i].ToString() != "")
+                    {
+                        row_cnt++;
+                        col_idx = i;
+                    }                        
+                }
+
+                if (row_cnt == 0)
+                {
+                    //신규불순물
+                    list_newImp.Add(dr[0].ToString());
+                }   
+                else if (row_cnt == 1)
+                {                   
+                    Dictionary<string, decimal> dict = new Dictionary<string, decimal>();                    
+                    for (int row = 0;row< dt_absChk.Rows.Count;row++)
+                    {
+                        if (dt_absChk.Rows[row][col_idx].ToString() != "")
+                        {
+                            dict.Add(dt_absChk.Rows[row][0].ToString(), De(dt_absChk.Rows[row][col_idx].ToString()));                            
+                        }
+                    }
+
+                    if (dict.Count == 1)
+                    {
+                        //고유불순물
+                        dr_imp[col_idx] = dr[0].ToString();
+                    }
+                    else
+                    {
+                        //한열에 두개
+                        string minValueKey = dict.Aggregate((x, y) => x.Value < y.Value ? x : y).Key;
+                        //중복불순물
+                        if (dr["Index"].ToString() == minValueKey)
+                        {
+                            dr_imp[col_idx] = dr[0].ToString();
+                        }
+                    }
+                }
+                else
+                {
+                    //한 행에 두개
+                    //중복불순물
+                    
+                }
+                
+
+            }
+
+
+            for (int i = 0; i < dt_absChk.Rows.Count; i++)
+            {
+                for (int j = 0; j < dt_absChk.Columns.Count; j++)
+                {
+
+                }
+            }
 
             return dt_rst;
         }

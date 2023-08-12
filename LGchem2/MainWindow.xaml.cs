@@ -168,8 +168,6 @@ namespace LGchem2
                     dt_raw = makeTableAll.GetRawTable(makeTable_SDC, path);
                 }
 
-                Global.print_DataTable(dt_raw);
-
                 //2. 레퍼런스 체크 : 엑셀 시트명이 파일명의 골뱅이 앞에 있는 문자열에 속해야함
                 //3. rrt 테이블 생성
                 ExcelControl excelControl = new ExcelControl();

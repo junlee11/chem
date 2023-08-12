@@ -208,6 +208,15 @@ namespace LGchem2
             return null;
         }
 
+        public static int? VlookupDt_Int(DataTable dt, double ref_val, string ref_col, string find_col)
+        {
+            foreach (DataRow dr in dt.Rows)
+            {
+                if (ref_val == double.Parse(dr[ref_col].ToString())) return Int32.Parse(dr[find_col].ToString());
+            }
+            return null;
+        }
+
         public static bool ChkStrInDicKey(string str, Dictionary<string, DataTable> dic)
         {
             foreach (KeyValuePair<string, DataTable> items in dic)
@@ -224,7 +233,7 @@ namespace LGchem2
             }
             return null;
         }
-
+        
         public static void ReleaseExcelObject(object obj)
         {
             try
