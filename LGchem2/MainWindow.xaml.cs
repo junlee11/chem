@@ -20,6 +20,7 @@ using System.Windows.Shapes;
 using System.Windows.Threading;
 using Path = System.IO.Path;
 using Excel = Microsoft.Office.Interop.Excel;
+using System.Reflection.Emit;
 
 namespace LGchem2
 {
@@ -31,6 +32,9 @@ namespace LGchem2
         private string basic_path = @"C:\LGchem2";
         private string result_path = @"C:\LGchem2\Result";
         private string ref_path = @"C:\LGchem2\Ref";
+        private string refExcel_path = @"C:\LGchem2\Ref\Ref.xlsx";
+        private Dictionary<string, DataTable> dic_ref = new Dictionary<string, DataTable>();
+        private Pgb_Val pgb_val = new Pgb_Val();
 
         public MainWindow()
         {
@@ -43,6 +47,11 @@ namespace LGchem2
 
             dic = new DirectoryInfo(ref_path);
             if (!dic.Exists) dic.Create();
+
+            this.pgb_run.DataContext = pgb_val;
+            this.pgb_text.DataContext = pgb_val;
+            
+            //this.Loaded += new RoutedEventHandler(MainPage_Loaded);
 
             ////pdf test
             //string path = @"C:\Users\USER\Desktop\코드\lgchem_sample\230809\LG-008(W)\LG-008@008P23002@C[99.802%].pdf";
@@ -65,6 +74,10 @@ namespace LGchem2
 
             ////RRT 테이블 생성
             //dt_raw = makeTableAll.MakeRRTColumn(dt_raw);
+        }
+
+        private void MainPage_Loaded(object sender, RoutedEventArgs e)
+        {
             
         }
 
@@ -100,24 +113,24 @@ namespace LGchem2
         private void btn_run_Click(object sender, RoutedEventArgs e)
         {
             //인터락
-            if (this.list_pdf.SelectedItems.Count == 0)
+            if (this.list_pdf.Items.Count == 0)
             {
                 MessageBox.Show("PDF 파일을 선택하세요");
                 return;
             }
                 
-            double rrt_limit;
-            if (!Double.TryParse(this.tb_rrt_limit.Text, out rrt_limit))
+            decimal limit;
+            if (!Decimal.TryParse(this.tb_rrt_limit.Text, out limit))
             {
                 MessageBox.Show("RRT 한계값은 실수가 입력되어야 합니다.");
                 return;
             }
 
             List<string> list_path = new List<string>();
-            foreach (var item in this.list_pdf.SelectedItems) list_path.Add(((Model_pdf)item).pdf_path);
+            foreach (var item in this.list_pdf.Items) list_path.Add(((Model_pdf)item).pdf_path);
 
             Dictionary<string, object> dic_src = new Dictionary<string, object>();
-            dic_src.Add("rrt_limit", rrt_limit);
+            dic_src.Add("limit", limit);
             dic_src.Add("list_path", list_path);
 
             this.pgb_run.IsIndeterminate = true;
@@ -125,28 +138,24 @@ namespace LGchem2
             //PDF 만들기
             Thread th = new Thread(new ParameterizedThreadStart(th_pdf));
             th.IsBackground = true;
-            th.Start();
+            th.Start(dic_src);
         }
 
         private void th_pdf(object o)
         {
             Dictionary<string, object>dic_src = (Dictionary<string, object>)o;
-            double rrt_limit = (double)dic_src["rrt_limit"];
+            decimal limit = (decimal)dic_src["limit"];
             List<string> list_path = (List<string>)dic_src["list_path"];
-
-            //결과엑셀 파일 만들기
-            Excel.Application app = new Excel.Application();
-            Excel.Workbook wb = new Excel.Workbook();
-            app.Visible = true;            
 
             //pdf 반복
             foreach (string path in list_path)
             {
+                string fileName = Path.GetFileName(path);
                 Debug.WriteLine("good");
 
                 //1. pdf 변환
-                MakeTable_LGD makeTable_LGD = new MakeTable_LGD();
-                MakeTable_SDC makeTable_SDC = new MakeTable_SDC();
+                MakeRawTable_LGD makeTable_LGD = new MakeRawTable_LGD();
+                MakeRawTable_SDC makeTable_SDC = new MakeRawTable_SDC();
                 MakeTableAll makeTableAll = new MakeTableAll();
 
                 DataTable dt_raw = new DataTable();
@@ -159,9 +168,36 @@ namespace LGchem2
                     dt_raw = makeTableAll.GetRawTable(makeTable_SDC, path);
                 }
 
-                //2. rrt 테이블
+                Global.print_DataTable(dt_raw);
 
-                //3. pdf 첨부
+                //2. 레퍼런스 체크 : 엑셀 시트명이 파일명의 골뱅이 앞에 있는 문자열에 속해야함
+                //3. rrt 테이블 생성
+                ExcelControl excelControl = new ExcelControl();
+                DataTable dt_imp = new DataTable();
+
+                //dic_ref에 재료에 해당하는 레퍼런스 dt 있는지 검사해서 최초이면 레퍼런스 적재
+                if (!Global.ChkStrInDicKey(fileName.Split('@')[0], dic_ref))
+                {
+                    string key = "";
+                    DataTable dt_val = new DataTable();
+                    (key, dt_val) = excelControl.GetDic_SheetContentTable(refExcel_path, Path.GetFileName(path).Split('@')[0]);
+                    if (key != "") dic_ref.Add(key, dt_val);
+                }
+
+                //그 재료가 레퍼런스에 속하는지 검사해서 속하면 임퓨리티 테이블 생성
+                if (Global.ChkStrInDicKey(fileName.Split('@')[0], dic_ref))
+                {                    
+                    //레퍼런스에 있을때 불순물 테이블 만듬
+                    dt_imp = makeTableAll.MakeImpurityTable(dt_raw, Global.GetdtInDicKey(fileName.Split('@')[0], dic_ref), limit);
+                }
+                else
+                {
+                    dt_imp = null;
+                }
+
+                //4. raw테이블과 rrt 테이블 배치하기
+
+                //4. pdf 첨부
             }
 
             Dispatcher.Invoke(DispatcherPriority.Normal, new Action(delegate

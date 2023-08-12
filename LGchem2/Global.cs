@@ -5,6 +5,8 @@ using System.Data;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -70,8 +72,54 @@ namespace LGchem2
                 MessageBox.Show("데이터테이블을 csv로 저장할 수 없습니다." + "\n" + ex.Message);
                 return false;
             }
+        }
+
+        public static DataTable GetCSVData(string str_path, int resource_flag)            //2이면 임베디드 리소스
+        {
+            try
+            {
+                StreamReader file;
+                if (resource_flag == 1) file = new StreamReader(str_path);
+                else
+                {
+                    var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(str_path);
+                    file = new StreamReader(stream);
+                }
+
+                DataTable table = new DataTable();
+                var flag_dtcolumn = 0;
+
+                while (!file.EndOfStream)
+                {
+                    string line = file.ReadLine();
+                    string[] data = line.Split(',');
+
+                    if (flag_dtcolumn == 0)
+                    {
+                        foreach (string s in data)
+                        {
+                            table.Columns.Add(s);
+                        }
+                    }
+                    else
+                    {
+                        table.Rows.Add(data.ToArray());
+                    }
+
+                    flag_dtcolumn++;
+
+                }
+
+                return table;
+            }
+            catch
+            {
+                return null;
+            }
 
         }
+
+        
 
         public static void print_DataTable(DataTable dt, int header = 1)
         {
@@ -133,7 +181,7 @@ namespace LGchem2
             return dt;
         }
 
-        public static DataTable DelLittleRow(DataTable dt)
+        public static DataTable DelLittleRow(DataTable dt, int min_cnt)
         {
             dt.AcceptChanges();
             foreach (DataRow dr in dt.Rows)
@@ -144,7 +192,7 @@ namespace LGchem2
                 {
                     if (dr[i].ToString() != "") cnt++;
                 }
-                if (cnt <= 1) dr.Delete();
+                if (cnt <= min_cnt) dr.Delete();
             }
             dt.AcceptChanges();
 
@@ -158,6 +206,44 @@ namespace LGchem2
                 if (ref_val == double.Parse(dr[ref_col].ToString())) return double.Parse(dr[find_col].ToString());
             }
             return null;
+        }
+
+        public static bool ChkStrInDicKey(string str, Dictionary<string, DataTable> dic)
+        {
+            foreach (KeyValuePair<string, DataTable> items in dic)
+            {
+                if (str.Contains(items.Key)) return true;
+            }
+            return false;
+        }
+        public static DataTable GetdtInDicKey(string str, Dictionary<string, DataTable> dic)
+        {
+            foreach (KeyValuePair<string, DataTable> items in dic)
+            {
+                if (str.Contains(items.Key)) return items.Value;
+            }
+            return null;
+        }
+
+        public static void ReleaseExcelObject(object obj)
+        {
+            try
+            {
+                if (obj != null)
+                {
+                    Marshal.ReleaseComObject(obj);
+                    obj = null;
+                }
+            }
+            catch (Exception ex)
+            {
+                obj = null;
+                throw ex;
+            }
+            finally
+            {
+                GC.Collect();
+            }
         }
     }
 }

@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:LGchem2"
         mc:Ignorable="d"
-        Title="LGChem2" Height="600" Width="800"
+        Title="LGChem2" Height="600" Width="1000"
         WindowStartupLocation="CenterScreen"
         UseLayoutRounding="True"
         ResizeMode="CanMinimize">
@@ -48,10 +48,10 @@
                         </Button>
 
                         <Grid Margin="20 0 0 0">
-                            <ProgressBar x:Name="pgb_run" Width="150" Height="25" Minimum="0" Maximum="100" Value="0" 
-                                 HorizontalAlignment="Left"/>
+                            <ProgressBar x:Name="pgb_run" Width="150" Height="25" Minimum="0" Maximum="100" Value="{Binding val, UpdateSourceTrigger=PropertyChanged}" 
+                                 HorizontalAlignment="Left" IsIndeterminate="{Binding isindertate, UpdateSourceTrigger=PropertyChanged}"/>
                             <TextBlock x:Name="pgb_text" HorizontalAlignment="Center" Margin="5 0 0 0"
-                               VerticalAlignment="Center"/>
+                                       Text="{Binding str, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center"/>
                         </Grid>
                     </StackPanel>
 
@@ -60,7 +60,7 @@
                                   SelectionMode="Extended" Height="375">
                             <ListView.View>
                                 <GridView>
-                                    <GridViewColumn Header="파일명" Width="150" DisplayMemberBinding="{Binding pdf_name}"/>
+                                    <GridViewColumn Header="파일명" Width="300" DisplayMemberBinding="{Binding pdf_name}"/>
                                     <GridViewColumn Header="경로" DisplayMemberBinding="{Binding pdf_path}"/>
                                 </GridView>
                             </ListView.View>

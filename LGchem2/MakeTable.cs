@@ -19,10 +19,10 @@ namespace LGchem2
 {
     public interface ITable
     {
-        DataTable Extract_Table(string path);
+        DataTable Extract_Table(string path);        
     }
 
-    public class MakeTable_LGD : ITable
+    public class MakeRawTable_LGD : ITable
     {
         public const double width_A4 = 597.6;
         public const double height_A4 = 842.4;
@@ -73,7 +73,7 @@ namespace LGchem2
             dt_rst = Global.DelEmptyColumn(dt_rst);            
 
             //결측행 제거
-            dt_rst = Global.DelLittleRow(dt_rst);
+            dt_rst = Global.DelLittleRow(dt_rst, 1);
 
             //칼럼명을 뒤에서 바꾸기 위해 임시로 다른걸로 바꿔둠
             for (int i = 0; i < dt_rst.Columns.Count; i++)
@@ -92,7 +92,7 @@ namespace LGchem2
         }
     }
 
-    public class MakeTable_SDC : ITable
+    public class MakeRawTable_SDC : ITable
     {
         public DataTable Extract_Table(string path)
         {
@@ -130,7 +130,7 @@ namespace LGchem2
             dt_rst = Global.DelEmptyColumn(dt_rst);
 
             //결측행 제거
-            dt_rst = Global.DelLittleRow(dt_rst);
+            dt_rst = Global.DelLittleRow(dt_rst, 1);
 
             for (int i = 0; i < dt_rst.Columns.Count; i++)            
                 dt_rst.Columns[i].ColumnName = $"c{i.ToString()}";
@@ -185,7 +185,18 @@ namespace LGchem2
             return dt;
         }
 
-        public DataTable MakeRRTColumn(DataTable dt)
+        public DataTable MakeImpurityTable(DataTable dt_raw, DataTable dt_ref, decimal limit)
+        {
+            Global.print_DataTable(dt_raw);
+            Global.print_DataTable(dt_ref);
+
+            DataTable dt_rst = new DataTable();
+
+            return dt_rst;
+        }
+
+        //private
+        private DataTable MakeRRTColumn(DataTable dt)
         {
             DataColumn dataColumn = new DataColumn(columnName: "RRT", dataType : typeof(double));
             dt.Columns.Add("RRT", typeof(double)).SetOrdinal(2);            
@@ -198,7 +209,7 @@ namespace LGchem2
             return dt;
         }
 
-        public DataTable ConverDoubleTable(DataTable dt)
+        private DataTable ConverDoubleTable(DataTable dt)
         {
             DataTable ret = dt.Clone();
             foreach (DataColumn col in ret.Columns)            
