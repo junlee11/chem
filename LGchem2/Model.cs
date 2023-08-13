@@ -1,15 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Data;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace LGchem2
 {
-    public class Model
+    public class PdfDt
     {
-
+        public string pdf_name { get; set; }
+        public string pdf_path { get; set; }
+        public DataTable dt_raw { get; set; }
+        public DataTable dt_imp { get; set; }
+        public DataTable dt_ref { get; set; }
     }
 
     public class Model_pdf

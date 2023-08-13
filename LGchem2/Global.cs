@@ -169,6 +169,14 @@ namespace LGchem2
             }
         }
 
+        public static void AddColDt_Index(DataTable dt, string col, int idx)
+        {
+            DataColumn dc = new DataColumn();
+            dc.ColumnName = col;
+            dt.Columns.Add(dc);
+            dc.SetOrdinal(idx);
+        }
+
         public static DataTable DelEmptyColumn(DataTable dt)
         {
             foreach (var column in dt.Columns.Cast<DataColumn>().ToArray())
@@ -199,11 +207,32 @@ namespace LGchem2
             return dt;
         }
 
+        public static double? HVlookupDt(DataTable dt, string ref_val, string find_col)
+        {
+            int find_row = 0;
+            foreach (DataRow dr in dt.Rows) if (dr[0].ToString() == ref_val) find_row = dt.Rows.IndexOf(dr);
+
+            for (int i = 0;i<dt.Columns.Count; i++)
+            {
+                if (dt.Columns[i].ColumnName == find_col) return double.Parse(dt.Rows[find_row][i].ToString());
+            }
+            return null;
+        }
+
         public static double? VlookupDt(DataTable dt, double ref_val, string ref_col, string find_col)
         {
             foreach (DataRow dr in dt.Rows)
             {
                 if (ref_val == double.Parse(dr[ref_col].ToString())) return double.Parse(dr[find_col].ToString());
+            }
+            return null;
+        }
+
+        public static string VlookupDt_Str(DataTable dt, double ref_val, string ref_col, string find_col)
+        {
+            foreach (DataRow dr in dt.Rows)
+            {
+                if (ref_val == double.Parse(dr[ref_col].ToString())) return dr[find_col].ToString();
             }
             return null;
         }

@@ -32,7 +32,7 @@ namespace LGchem2
             DataTable dt_rst = new DataTable();            
             Aspose.Pdf.Document pdfDocument = new Aspose.Pdf.Document(path);
 
-            Debug.WriteLine(pdfDocument.Pages.Count);
+            //Debug.WriteLine(pdfDocument.Pages.Count);
             foreach (var page in pdfDocument.Pages)
             {
                 Aspose.Pdf.Text.TableAbsorber absorber = new Aspose.Pdf.Text.TableAbsorber();
@@ -192,10 +192,10 @@ namespace LGchem2
 
         public DataTable MakeImpurityTable(DataTable dt_raw, DataTable dt_ref, decimal limit)
         {
+            DataTable dt_ref_raw = dt_ref.Copy();
             while (dt_ref.Rows.Count > 2) dt_ref.Rows.RemoveAt(2);
             int? peak_idx = Global.VlookupDt_Int(dt_raw, Convert.ToDouble(dt_raw.AsEnumerable().Max(row => row["Area"])), "Area", "Index");
-            DataTable dt_rst = new DataTable();
-
+            
             DataTable dt_abs = dt_ref.Clone();
             foreach (DataRow dr in dt_raw.Rows)
             {
@@ -204,7 +204,7 @@ namespace LGchem2
                 DataRow new_dr = dt_abs.NewRow();
                 for (int i = 0;i<dt_ref.Columns.Count;i++)
                 {
-                    if (i == 0) new_dr[i] = "Index" + dt_raw.Rows.IndexOf(dr).ToString();
+                    if (i == 0) new_dr[i] = $"Index{(dt_raw.Rows.IndexOf(dr) + 1).ToString()}";
                     else new_dr[i] = Math.Abs(De(dr["RRT"].ToString()) - De(dt_ref.Rows[1][i].ToString()));
                 }
                 dt_abs.Rows.Add(new_dr);
@@ -212,41 +212,38 @@ namespace LGchem2
 
             DataTable dt_absChk = dt_ref.Clone();
             foreach (DataRow dr in dt_abs.Rows)
-            {
-                //Peak 인덱스는 제외
-                if (dt_abs.Rows.IndexOf(dr) == peak_idx) continue;
+            {   
                 DataRow new_dr = dt_absChk.NewRow();
                 for (int i =0;i<dt_ref.Columns.Count; i++)
                 {
-                    if (i == 0) new_dr[i] = "Index" + dt_abs.Rows.IndexOf(dr).ToString();
+                    if (i == 0) new_dr[i] = dr[0].ToString();
                     else new_dr[i] = (De(dr[i].ToString()) <= limit) ? dr[i].ToString() : "";
                 }
                 dt_absChk.Rows.Add(new_dr);
-            }            
+            }
 
             DataTable dt_imp = dt_ref.Clone();
             DataRow dr_imp = dt_imp.NewRow();
-            dt_imp.Rows.Add(dr_imp);
-            List<string> list_newImp = new List<string>();
+            dt_imp.Rows.Add(dr_imp);            
 
             //불순물정하기
             foreach (DataRow dr in dt_absChk.Rows)
-            {
+            {   
                 int row_cnt = 0;
                 int col_idx = 0;
-                for (int i = 0;i<dt_absChk.Columns.Count;i++)
+                for (int i = 1;i<dt_absChk.Columns.Count;i++)
                 {
                     if (dr[i].ToString() != "")
                     {
                         row_cnt++;
                         col_idx = i;
-                    }                        
+                    }
                 }
 
                 if (row_cnt == 0)
                 {
-                    //신규불순물
-                    list_newImp.Add(dr[0].ToString());
+                    dt_imp = AddDtNewImp(dt_imp, dr[0].ToString());
+                                     
                 }   
                 else if (row_cnt == 1)
                 {                   
@@ -270,9 +267,14 @@ namespace LGchem2
                         //한열에 두개
                         string minValueKey = dict.Aggregate((x, y) => x.Value < y.Value ? x : y).Key;
                         //중복불순물
-                        if (dr["Index"].ToString() == minValueKey)
+                        if (dr[0].ToString() == minValueKey)
                         {
                             dr_imp[col_idx] = dr[0].ToString();
+                        }
+                        else
+                        {
+                            //신규
+                            dt_imp = AddDtNewImp(dt_imp, dr[0].ToString());
                         }
                     }
                 }
@@ -281,7 +283,7 @@ namespace LGchem2
                     //한 행에 두개
                     //중복불순물
                     Dictionary<int, decimal> dict = new Dictionary<int, decimal>();
-                    for (int col = 0; col < dt_absChk.Columns.Count; col++)
+                    for (int col = 1; col < dt_absChk.Columns.Count; col++)
                     {
                         if (dr[col].ToString() != "")
                         {
@@ -291,14 +293,92 @@ namespace LGchem2
 
                     int minValueKey = dict.Aggregate((x, y) => x.Value < y.Value ? x : y).Key;
                     dr_imp[minValueKey] = dr[0].ToString();
-                }          
+                }
             }
 
-            Global.print_DataTable(dt_abs);
-            Global.print_DataTable(dt_absChk);
-            Global.print_DataTable(dt_rst);
+            dt_imp.Columns.RemoveAt(0);
 
-            return dt_rst;
+            //Peak
+            Global.AddColDt_Index(dt_imp, "Peak", 0);
+            dr_imp["Peak"] = $"Index{peak_idx}";
+            
+            //RRT 등 넣기
+            Global.AddColDt_Index(dt_imp, "Item", 0);
+            dt_imp = AddItemRow(dt_imp, dt_raw, "% Area", 0);            
+            dt_imp = AddItemRow(dt_imp, dt_raw, "RRT", 0);
+            dt_imp = AddItemRow(dt_imp, dt_raw, "RT", 0);
+
+            Global.print_DataTable(dt_imp);
+            //dt_ref
+            dt_imp = AddItemRefRow(dt_imp, dt_ref_raw, "RRT", 0);
+            dt_imp = AddItemRefRow(dt_imp, dt_ref_raw, "RT", 0);
+            
+            for (int i = 0; i< dt_imp.Rows.Count; i++)
+            {
+                if (i == 0) dt_imp.Rows[i][0] = "REF RT";
+                if (i == 1) dt_imp.Rows[i][0] = "REF RRT";
+                if (i == 2) dt_imp.Rows[i][0] = "QC RT";
+                if (i == 3) dt_imp.Rows[i][0] = "QC RRT";
+                if (i == 4) dt_imp.Rows[i][0] = "QC %AREA";
+                if (i == 5) dt_imp.Rows[i][0] = "INDEX";
+            }
+
+            return dt_imp;
+        }
+
+        private DataTable AddItemRefRow(DataTable dt_imp, DataTable dt_ref, string item, int pos)
+        {
+            DataRow new_dr = dt_imp.NewRow();
+            new_dr[0] = item;
+            for (int i =1;i<dt_imp.Columns.Count; i++)
+            {
+                if (dt_imp.Columns[i].ColumnName == "Peak")
+                {
+                    if (item == "RT") new_dr["Peak"] = dt_ref.Rows[dt_ref.Rows.Count - 1][1].ToString();
+                    if (item == "RRT") new_dr["Peak"] = 1;
+                }
+                else if (dt_imp.Rows[dt_imp.Rows.Count - 1][i].ToString() != "")
+                {
+                    string col_name = dt_imp.Columns[i].ColumnName;
+                    double? val = Global.HVlookupDt(dt_ref, item, col_name);
+                    new_dr[i] = val;
+                }
+                else new_dr[i] = "";
+            }
+            dt_imp.Rows.InsertAt(new_dr, pos);
+            return dt_imp;
+        }
+
+        private DataTable AddItemRow(DataTable dt_imp, DataTable dt_raw, string item, int pos)
+        {
+            DataRow new_dr = dt_imp.NewRow();
+            new_dr[0] = item;
+            for (int i = 1; i < dt_imp.Columns.Count; i++)
+            {   
+                if (dt_imp.Rows[dt_imp.Rows.Count - 1][i].ToString() != "")
+                {
+                    double idx = Double.Parse(dt_imp.Rows[dt_imp.Rows.Count - 1][i].ToString().Replace("Index", ""));
+                    double? val = Global.VlookupDt(dt_raw, idx, "Index", item);
+                    new_dr[i] = val;
+                }
+                else new_dr[i] = "";                
+            }
+            dt_imp.Rows.InsertAt(new_dr, pos);
+            return dt_imp;
+        }
+
+        private DataTable AddDtNewImp(DataTable dt_imp, string Index)
+        {
+            //신규불순물
+            if (dt_imp.Columns[dt_imp.Columns.Count - 1].ToString().Contains("Imp")) Global.AddColDt(dt_imp, "New1", 0);
+            else
+            {
+                int new_cnt = Int32.Parse(dt_imp.Columns[dt_imp.Columns.Count - 1].ToString().Replace("New","")) + 1;
+                Global.AddColDt(dt_imp, $"New{new_cnt}", 0);
+            }
+            dt_imp.Rows[0][dt_imp.Columns.Count - 1] = Index;
+
+            return dt_imp;
         }
 
         //private

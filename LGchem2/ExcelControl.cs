@@ -11,11 +11,115 @@ using System.Threading.Tasks;
 using System.Windows;
 using Excel = Microsoft.Office.Interop.Excel;
 using DataTable = System.Data.DataTable;
+using static System.Net.Mime.MediaTypeNames;
+using System.Data;
+using System.Windows.Media;
+using System.IO.Ports;
 
 namespace LGchem2
 {
     public class ExcelControl
     {
+        public enum Spec
+        {
+            spcOut, spcIn, lclOut, nospc
+        }
+
+        public void DataTableToExcel(DataTable dt, string path, int cell_row, int cell_col, Spec spec, string pdf_path = null)
+        {
+            Excel.Application application = null;
+            Workbook workBook = null;            
+
+            try
+            {
+                //Excel 프로그램 실행
+                application = new Excel.Application();
+                //Excel 화면 띄우기 옵션
+                application.Visible = false;
+                //파일로부터 불러오기
+                workBook = application.Workbooks.Open(path);
+                Worksheet worksheet = workBook.ActiveSheet;
+
+                //파일명
+                if (pdf_path != null)                
+                    worksheet.Cells[cell_row, cell_col] = Path.GetFileName(pdf_path);                    
+                
+                cell_row++;
+
+                Range rng = worksheet.Range[worksheet.Cells[cell_row, cell_col], worksheet.Cells[cell_row + dt.Rows.Count, cell_col + dt.Columns.Count - 1]];
+
+                //칼럼부터
+                for (int j = 0;j<dt.Columns.Count;j++)
+                {
+                    worksheet.Cells[cell_row, cell_col + j] = dt.Columns[j].ColumnName;
+                }
+                cell_row++;
+
+                for (int i = 0;i<dt.Rows.Count;i++)
+                {
+                    for (int j = 0;j< dt.Columns.Count;j++)
+                    {
+                        worksheet.Cells[cell_row + i, cell_col + j] = dt.Rows[i][j].ToString();
+                    }
+                }
+
+                //RRT 테이블 Peak 스펙인아웃 판정
+                if (spec == Spec.spcOut)
+                {
+                    rng.Cells.Offset[5, 1].Interior.ColorIndex = 3;
+                }
+                else if (spec == Spec.lclOut)
+                {
+                    rng.Cells.Offset[5, 1].Interior.ColorIndex = 5;
+                }
+
+                this.RangeBorder(rng);
+                if (pdf_path != null) this.ExcelInsertOLE(worksheet, pdf_path, cell_row + dt.Rows.Count);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+            }
+            finally
+            {
+                object missing = Type.Missing;
+                object noSave = true;
+                workBook.Close(noSave, missing, missing); // 엑셀 워크북 종료
+                application.Quit();        // 엑셀 어플리케이션 종료
+
+                //오브젝트 해제
+                Global.ReleaseExcelObject(workBook);
+                Global.ReleaseExcelObject(application);
+            }
+        }
+
+        public void SaveExcelFile(string path)
+        {
+            Excel.Application excel = new Excel.Application();
+            Workbook workBook = null;
+            try
+            {                
+                excel.Workbooks.Add();
+                workBook = excel.ActiveWorkbook;
+                Excel.Worksheet sheet = workBook.ActiveSheet;
+
+                //sheet.Cells[1, 1] = path;
+                workBook.SaveAs(path);
+                workBook.Close();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+            }
+            finally
+            {
+                excel.Quit();        // 엑셀 어플리케이션 종료
+                //오브젝트 해제
+                Global.ReleaseExcelObject(workBook);
+                Global.ReleaseExcelObject(excel);
+            }
+        }
+
         public (string, DataTable) GetDic_SheetContentTable(string ref_path, string mat_name)
         {
             string key = "";
@@ -32,14 +136,9 @@ namespace LGchem2
             return (key, dt_rst);
         }
 
-        public void ExcelInsertOLE(string path)
+        public void ExcelInsertOLE(Worksheet sheet, string path, int cell_row)
         {
-            Microsoft.Office.Interop.Excel.Application excel = new Excel.Application();
-            excel.Workbooks.Add();
-            Microsoft.Office.Interop.Excel.Workbook workBook = excel.ActiveWorkbook;
-            Microsoft.Office.Interop.Excel.Worksheet sheet = workBook.ActiveSheet;
-
-            Excel.OLEObjects oleObjects = (Microsoft.Office.Interop.Excel.OLEObjects)
+            Excel.OLEObjects oleObjects = (Excel.OLEObjects)
                 sheet.OLEObjects(Type.Missing);
 
             oleObjects.Add(
@@ -50,15 +149,11 @@ namespace LGchem2
                 @"C:\Users\USER\Desktop\코드\a.ico",   // IconFileName
                 0,   // IconIndex
                 Path.GetFileName(path),   // IconLabel
-                50,   // Left
-                50,   // Top
+                55,   // Left
+                16.5 * cell_row,   // Top
                 50,   // Width
                 50    // Height
             );
-
-            excel.Visible = true;
-            workBook.Close(true);
-            excel.Quit();
         }
 
         //private
@@ -110,9 +205,9 @@ namespace LGchem2
                     val = temp_rst;                    
                 }
             }
-            catch (Exception exc)
+            catch (Exception ex)
             {
-                MessageBox.Show(exc.Message);
+                MessageBox.Show(ex.ToString());
             }
             finally
             {
@@ -164,7 +259,13 @@ namespace LGchem2
             {
                 return null;
             }
+        }
 
+        private void RangeBorder(Range rng)
+        {
+            rng.Borders.LineStyle = Excel.XlLineStyle.xlLineStyleNone;
+            rng.Borders.Weight = Excel.XlBorderWeight.xlThin;
+            rng.Interior.ColorIndex = 0;
         }
 
     }

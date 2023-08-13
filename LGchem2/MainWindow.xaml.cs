@@ -50,7 +50,7 @@ namespace LGchem2
 
             this.pgb_run.DataContext = pgb_val;
             this.pgb_text.DataContext = pgb_val;
-            
+
             //this.Loaded += new RoutedEventHandler(MainPage_Loaded);
 
             ////pdf test
@@ -146,6 +146,9 @@ namespace LGchem2
             Dictionary<string, object>dic_src = (Dictionary<string, object>)o;
             decimal limit = (decimal)dic_src["limit"];
             List<string> list_path = (List<string>)dic_src["list_path"];
+            List<PdfDt> list_pdfdt = new List<PdfDt>();
+
+            ExcelControl excelControl = new ExcelControl();
 
             //pdf 반복
             foreach (string path in list_path)
@@ -170,7 +173,7 @@ namespace LGchem2
 
                 //2. 레퍼런스 체크 : 엑셀 시트명이 파일명의 골뱅이 앞에 있는 문자열에 속해야함
                 //3. rrt 테이블 생성
-                ExcelControl excelControl = new ExcelControl();
+                
                 DataTable dt_imp = new DataTable();
 
                 //dic_ref에 재료에 해당하는 레퍼런스 dt 있는지 검사해서 최초이면 레퍼런스 적재
@@ -182,21 +185,78 @@ namespace LGchem2
                     if (key != "") dic_ref.Add(key, dt_val);
                 }
 
+                DataTable dt_ref = null;
                 //그 재료가 레퍼런스에 속하는지 검사해서 속하면 임퓨리티 테이블 생성
                 if (Global.ChkStrInDicKey(fileName.Split('@')[0], dic_ref))
-                {                    
+                {
                     //레퍼런스에 있을때 불순물 테이블 만듬
-                    dt_imp = makeTableAll.MakeImpurityTable(dt_raw, Global.GetdtInDicKey(fileName.Split('@')[0], dic_ref), limit);
+                    dt_ref = Global.GetdtInDicKey(fileName.Split('@')[0], dic_ref);
+                    dt_imp = makeTableAll.MakeImpurityTable(dt_raw, dt_ref, limit);
                 }
                 else
                 {
                     dt_imp = null;
                 }
 
-                //4. raw테이블과 rrt 테이블 배치하기
-
-                //4. pdf 첨부
+                //list에 담기
+                list_pdfdt.Add(new PdfDt() { pdf_path = path, pdf_name = fileName, dt_raw = dt_raw, dt_imp = dt_imp, dt_ref = dt_ref });
             }
+            
+            string excelFileName = "";
+            if (list_pdfdt.Count != 0)
+            {
+                excelFileName = $"{result_path}\\result_{DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss")}.xlsx";
+                excelControl.SaveExcelFile(excelFileName);
+            }
+
+            int row_Idx = 2;
+            int col_rawIdx = 2;
+            int col_impIdx = 10;
+            
+            foreach (PdfDt item in list_pdfdt)
+            {
+                //4. raw테이블과 rrt 테이블 배치하기
+                //5. pdf 첨부
+                ExcelControl.Spec spc = new ExcelControl.Spec();
+                Global.print_DataTable(item.dt_ref);
+                if (item.dt_ref == null) spc = ExcelControl.Spec.nospc;
+                else
+                {
+                    if (item.dt_ref.Rows[2][0].ToString() == "" || item.dt_ref.Rows[3][0].ToString() == "")
+                    {
+                        spc = ExcelControl.Spec.nospc;
+                    }
+                    double peak_val = double.Parse(item.dt_imp.Rows[4]["Peak"].ToString());
+                    double lcl;
+                    double spec;
+
+                    if (!Double.TryParse(item.dt_ref.Rows[2][1].ToString(), out spec) || Double.TryParse(item.dt_ref.Rows[3][1].ToString(), out lcl))
+                    {
+                        spc = ExcelControl.Spec.nospc;
+                    }
+                    else
+                    {
+                        spec = Double.Parse(item.dt_ref.Rows[2][1].ToString());
+                        lcl = Double.Parse(item.dt_ref.Rows[3][1].ToString());
+
+                        if (peak_val >= lcl) spc = ExcelControl.Spec.spcIn;
+                        else if (peak_val >= spec) spc = ExcelControl.Spec.lclOut;
+                        else spc = ExcelControl.Spec.spcOut;
+                    }
+                }
+                
+                Debug.WriteLine(item.pdf_name);
+                Debug.WriteLine(item.pdf_path);
+                Global.print_DataTable(item.dt_raw);
+                Global.print_DataTable(item.dt_imp);
+
+                excelControl.DataTableToExcel(item.dt_raw, excelFileName, row_Idx, col_rawIdx, spc, item.pdf_path);
+                excelControl.DataTableToExcel(item.dt_imp, excelFileName, row_Idx, col_impIdx, spc);
+
+                if (item.dt_raw.Rows.Count >= item.dt_imp.Rows.Count) row_Idx += item.dt_raw.Rows.Count + 7;
+                else row_Idx += item.dt_imp.Rows.Count + 5;
+            }
+            Debug.WriteLine("good");
 
             Dispatcher.Invoke(DispatcherPriority.Normal, new Action(delegate
             {
