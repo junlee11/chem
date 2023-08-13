@@ -222,10 +222,7 @@ namespace LGchem2
                     else new_dr[i] = (De(dr[i].ToString()) <= limit) ? dr[i].ToString() : "";
                 }
                 dt_absChk.Rows.Add(new_dr);
-            }
-
-            Global.print_DataTable(dt_abs);
-            Global.print_DataTable(dt_absChk);
+            }            
 
             DataTable dt_imp = dt_ref.Clone();
             DataRow dr_imp = dt_imp.NewRow();
@@ -253,6 +250,7 @@ namespace LGchem2
                 }   
                 else if (row_cnt == 1)
                 {                   
+                    //limit보다 낮은 abs값이 한 인덱스에 하나만 존재
                     Dictionary<string, decimal> dict = new Dictionary<string, decimal>();                    
                     for (int row = 0;row< dt_absChk.Rows.Count;row++)
                     {
@@ -282,20 +280,23 @@ namespace LGchem2
                 {
                     //한 행에 두개
                     //중복불순물
-                    
-                }
-                
+                    Dictionary<int, decimal> dict = new Dictionary<int, decimal>();
+                    for (int col = 0; col < dt_absChk.Columns.Count; col++)
+                    {
+                        if (dr[col].ToString() != "")
+                        {
+                            dict.Add(col, De(dr[col].ToString()));
+                        }
+                    }
 
+                    int minValueKey = dict.Aggregate((x, y) => x.Value < y.Value ? x : y).Key;
+                    dr_imp[minValueKey] = dr[0].ToString();
+                }          
             }
 
-
-            for (int i = 0; i < dt_absChk.Rows.Count; i++)
-            {
-                for (int j = 0; j < dt_absChk.Columns.Count; j++)
-                {
-
-                }
-            }
+            Global.print_DataTable(dt_abs);
+            Global.print_DataTable(dt_absChk);
+            Global.print_DataTable(dt_rst);
 
             return dt_rst;
         }
