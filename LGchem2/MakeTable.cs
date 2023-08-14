@@ -204,7 +204,7 @@ namespace LGchem2
                 DataRow new_dr = dt_abs.NewRow();
                 for (int i = 0;i<dt_ref.Columns.Count;i++)
                 {
-                    if (i == 0) new_dr[i] = $"Index{(dt_raw.Rows.IndexOf(dr) + 1).ToString()}";
+                    if (i == 0) new_dr[i] = $"{(dt_raw.Rows.IndexOf(dr) + 1).ToString()}";
                     else new_dr[i] = Math.Abs(De(dr["RRT"].ToString()) - De(dt_ref.Rows[1][i].ToString()));
                 }
                 dt_abs.Rows.Add(new_dr);
@@ -220,7 +220,7 @@ namespace LGchem2
                     else new_dr[i] = (De(dr[i].ToString()) <= limit) ? dr[i].ToString() : "";
                 }
                 dt_absChk.Rows.Add(new_dr);
-            }
+            }            
 
             DataTable dt_imp = dt_ref.Clone();
             DataRow dr_imp = dt_imp.NewRow();
@@ -300,27 +300,26 @@ namespace LGchem2
 
             //Peak
             Global.AddColDt_Index(dt_imp, "Peak", 0);
-            dr_imp["Peak"] = $"Index{peak_idx}";
+            dr_imp["Peak"] = $"{peak_idx}";
             
             //RRT 등 넣기
             Global.AddColDt_Index(dt_imp, "Item", 0);
             dt_imp = AddItemRow(dt_imp, dt_raw, "% Area", 0);            
             dt_imp = AddItemRow(dt_imp, dt_raw, "RRT", 0);
             dt_imp = AddItemRow(dt_imp, dt_raw, "RT", 0);
-
-            Global.print_DataTable(dt_imp);
+            
             //dt_ref
             dt_imp = AddItemRefRow(dt_imp, dt_ref_raw, "RRT", 0);
             dt_imp = AddItemRefRow(dt_imp, dt_ref_raw, "RT", 0);
             
             for (int i = 0; i< dt_imp.Rows.Count; i++)
             {
-                if (i == 0) dt_imp.Rows[i][0] = "REF RT";
-                if (i == 1) dt_imp.Rows[i][0] = "REF RRT";
+                if (i == 0) dt_imp.Rows[i][0] = "Ref RT";
+                if (i == 1) dt_imp.Rows[i][0] = "Ref RRT";
                 if (i == 2) dt_imp.Rows[i][0] = "QC RT";
                 if (i == 3) dt_imp.Rows[i][0] = "QC RRT";
-                if (i == 4) dt_imp.Rows[i][0] = "QC %AREA";
-                if (i == 5) dt_imp.Rows[i][0] = "INDEX";
+                if (i == 4) dt_imp.Rows[i][0] = "QC %Area";
+                if (i == 5) dt_imp.Rows[i][0] = "Index";
             }
 
             return dt_imp;
@@ -337,13 +336,13 @@ namespace LGchem2
                     if (item == "RT") new_dr["Peak"] = dt_ref.Rows[dt_ref.Rows.Count - 1][1].ToString();
                     if (item == "RRT") new_dr["Peak"] = 1;
                 }
-                else if (dt_imp.Rows[dt_imp.Rows.Count - 1][i].ToString() != "")
+                else
                 {
                     string col_name = dt_imp.Columns[i].ColumnName;
                     double? val = Global.HVlookupDt(dt_ref, item, col_name);
                     new_dr[i] = val;
                 }
-                else new_dr[i] = "";
+                
             }
             dt_imp.Rows.InsertAt(new_dr, pos);
             return dt_imp;
@@ -357,9 +356,9 @@ namespace LGchem2
             {   
                 if (dt_imp.Rows[dt_imp.Rows.Count - 1][i].ToString() != "")
                 {
-                    double idx = Double.Parse(dt_imp.Rows[dt_imp.Rows.Count - 1][i].ToString().Replace("Index", ""));
+                    double idx = Double.Parse(dt_imp.Rows[dt_imp.Rows.Count - 1][i].ToString());
                     double? val = Global.VlookupDt(dt_raw, idx, "Index", item);
-                    new_dr[i] = val;
+                    new_dr[i] = Math.Round(double.Parse(val.ToString()), 3);
                 }
                 else new_dr[i] = "";                
             }
@@ -370,7 +369,7 @@ namespace LGchem2
         private DataTable AddDtNewImp(DataTable dt_imp, string Index)
         {
             //신규불순물
-            if (dt_imp.Columns[dt_imp.Columns.Count - 1].ToString().Contains("Imp")) Global.AddColDt(dt_imp, "New1", 0);
+            if (!dt_imp.Columns[dt_imp.Columns.Count - 1].ToString().Contains("New")) Global.AddColDt(dt_imp, "New1", 0);
             else
             {
                 int new_cnt = Int32.Parse(dt_imp.Columns[dt_imp.Columns.Count - 1].ToString().Replace("New","")) + 1;

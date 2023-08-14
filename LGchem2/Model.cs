@@ -15,6 +15,8 @@ namespace LGchem2
         public DataTable dt_raw { get; set; }
         public DataTable dt_imp { get; set; }
         public DataTable dt_ref { get; set; }
+        public double? spc { get; set; }
+        public double? lcl { get; set; }
     }
 
     public class Model_pdf

@@ -5,72 +5,151 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:LGchem2"
         mc:Ignorable="d"
-        Title="LGChem2" Height="600" Width="1000"
+        Title="LGChem2" Width="1550"
         WindowStartupLocation="CenterScreen"
         UseLayoutRounding="True"
         ResizeMode="CanMinimize">
     <Grid Margin="10 10 10 10">
         <TabControl HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
             <TabItem Header="메인">
-                <StackPanel Margin="0 15 0 0">
-                    <StackPanel Orientation="Horizontal">
-                        <Button x:Name="btn_select_pdf" Content="PDF 파일 선택" 
-                                Margin="5 0 0 0" Width="100" Height="25"                      
-                                Background="Ivory"
-                                HorizontalAlignment="Left"
-                                UseLayoutRounding="True"
-                                Click="btn_select_pdf_Click">
-                            <Button.Effect>
-                                <DropShadowEffect ShadowDepth="2" Direction="315" Color="Black" Opacity="0.5"/>
-                            </Button.Effect>
-                        </Button>
+                <StackPanel Margin="0 5 0 0" Orientation="Horizontal">
+                    <GroupBox>
+                        <GroupBox.Header>
+                            <Label Content="메인"/>
+                        </GroupBox.Header>
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Button x:Name="btn_select_pdf" Content="PDF 파일 추가" 
+                                        Margin="5 0 0 0" Width="100" Height="25"                      
+                                        Background="Ivory"
+                                        HorizontalAlignment="Left"
+                                        UseLayoutRounding="True"
+                                        Click="btn_select_pdf_Click">
+                                    <Button.Effect>
+                                        <DropShadowEffect ShadowDepth="2" Direction="315" Color="Black" Opacity="0.5"/>
+                                    </Button.Effect>
+                                </Button>
 
-                        <Button x:Name="btn_run" Content="시작" 
-                                Margin="20 0 0 0" Width="100" Height="25"                      
-                                Background="Lime"        
-                                HorizontalAlignment="Left"   
-                                Click="btn_run_Click"
-                                UseLayoutRounding="True">
-                            <Button.Effect>
-                                <DropShadowEffect ShadowDepth="2" Direction="315" Color="Black" Opacity="0.5"/>
-                            </Button.Effect>
-                        </Button>
+                                <Button x:Name="btn_run" Content="시작" 
+                                        Margin="20 0 0 0" Width="100" Height="25"                      
+                                        Background="Lime"        
+                                        HorizontalAlignment="Left"   
+                                        Click="btn_run_Click"
+                                        UseLayoutRounding="True">
+                                    <Button.Effect>
+                                        <DropShadowEffect ShadowDepth="2" Direction="315" Color="Black" Opacity="0.5"/>
+                                    </Button.Effect>
+                                </Button>
 
-                        <Button x:Name="btn_result" Content="결과 폴더" 
-                                Margin="20 0 0 0" Width="100" Height="25"                      
-                                Background="Ivory"        
-                                HorizontalAlignment="Left"   
-                                Click="btn_result_Click"
-                                UseLayoutRounding="True">
-                            <Button.Effect>
-                                <DropShadowEffect ShadowDepth="2" Direction="315" Color="Black" Opacity="0.5"/>
-                            </Button.Effect>
-                        </Button>
+                                <Button x:Name="btn_result" Content="결과 폴더" 
+                                        Margin="20 0 0 0" Width="100" Height="25"                      
+                                        Background="Ivory"        
+                                        HorizontalAlignment="Left"   
+                                        Click="btn_result_Click"
+                                        UseLayoutRounding="True">
+                                    <Button.Effect>
+                                        <DropShadowEffect ShadowDepth="2" Direction="315" Color="Black" Opacity="0.5"/>
+                                    </Button.Effect>
+                                </Button>
 
-                        <Grid Margin="20 0 0 0">
-                            <ProgressBar x:Name="pgb_run" Width="150" Height="25" Minimum="0" Maximum="100" Value="{Binding val, UpdateSourceTrigger=PropertyChanged}" 
-                                 HorizontalAlignment="Left" IsIndeterminate="{Binding isindertate, UpdateSourceTrigger=PropertyChanged}"/>
-                            <TextBlock x:Name="pgb_text" HorizontalAlignment="Center" Margin="5 0 0 0"
+                                <Button x:Name="btn_result_open" Content="결과 파일 열기" 
+                                        Margin="20 0 0 0" Width="100" Height="25"                      
+                                        Background="Ivory"        
+                                        HorizontalAlignment="Left"   
+                                        Click="btn_result_open_Click"                                
+                                        UseLayoutRounding="True">
+                                    <Button.Effect>
+                                        <DropShadowEffect ShadowDepth="2" Direction="315" Color="Black" Opacity="0.5"/>
+                                    </Button.Effect>
+                                </Button>
+                                <TextBox x:Name="tb_result_path" Width="200" VerticalContentAlignment="Center" FontSize="14" Margin="10 0 0 0"/>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal">
+                                <Grid Margin="5 10 0 0">
+                                    <ProgressBar x:Name="pgb_run" Width="850" Height="25" Minimum="0" Maximum="100" Value="{Binding val, UpdateSourceTrigger=PropertyChanged}" 
+                                                 HorizontalAlignment="Left" IsIndeterminate="{Binding isindertate, UpdateSourceTrigger=PropertyChanged}"/>
+                                    <TextBlock x:Name="pgb_text" HorizontalAlignment="Center" Margin="5 0 0 0"
                                        Text="{Binding str, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center"/>
-                        </Grid>
-                    </StackPanel>
+                                </Grid>
 
-                    <Grid>
-                        <ListView Name="list_pdf" Margin="5 15 10 0" ItemsSource="{Binding}"
-                                  SelectionMode="Extended" Height="375">
-                            <ListView.View>
-                                <GridView>
-                                    <GridViewColumn Header="파일명" Width="300" DisplayMemberBinding="{Binding pdf_name}"/>
-                                    <GridViewColumn Header="경로" DisplayMemberBinding="{Binding pdf_path}"/>
-                                </GridView>
-                            </ListView.View>
-                        </ListView>
-                    </Grid>
+                                <local:perBusySpinner x:Name="Spin_Control" 
+                                                        Width="20" 
+                                                        Background="Transparent" 
+                                                        Foreground="Blue"
+                                                        HorizontalAlignment="Right"
+                                                        VerticalAlignment="Center"
+                                                        Margin="5 11 0 0"/>
+                            </StackPanel>
 
-                    <StackPanel Orientation="Horizontal" Margin="0 10 0 0">
-                        <Label Content="RRT 한계값"/>
-                        <TextBox x:Name="tb_rrt_limit" Width="100" Text="0.015" VerticalContentAlignment="Center" FontSize="14" Margin="10 0 0 0"/>
-                    </StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Grid HorizontalAlignment="Stretch">
+                                    <ListView Name="list_pdf" Margin="5 10 10 0" ItemsSource="{Binding}"
+                                              SelectionMode="Extended" Width="900" Height="820" 
+                                              FontSize="14"
+                                              KeyDown="list_pdf_KeyDown"
+                                              AllowDrop="True"
+                                              MouseDoubleClick="list_pdf_MouseDoubleClick"
+                                              Drop="list_pdf_Drop">
+                                        <ListView.View>
+                                            <GridView>
+                                                <GridViewColumn Header="파일명" Width="300" DisplayMemberBinding="{Binding pdf_name}"/>
+                                                <GridViewColumn Header="경로" DisplayMemberBinding="{Binding pdf_path}"/>
+                                            </GridView>
+                                        </ListView.View>
+                                    </ListView>
+                                </Grid>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Margin="0 10 0 0">
+                                <Label Content="RRT 한계값"/>
+                                <TextBox x:Name="tb_rrt_limit" Width="100" Text="0.015" VerticalContentAlignment="Center" FontSize="14" Margin="10 0 0 0"/>
+                                <Label Content="작업 폴더" Margin="10 0 0 0"/>
+                                <TextBox x:Name="tb_workFolder" Width="400" VerticalContentAlignment="Center" FontSize="14" Margin="10 0 0 0"/>
+
+                                <Button x:Name="btn_workFolderSelect" Content="작업폴더 선택" 
+                                        Margin="20 0 0 0" Width="100" Height="25"                      
+                                        Background="Ivory"        
+                                        HorizontalAlignment="Left"   
+                                        Click="btn_workFolderSelect_Click"                                
+                                        UseLayoutRounding="True">
+                                    <Button.Effect>
+                                        <DropShadowEffect ShadowDepth="2" Direction="315" Color="Black" Opacity="0.5"/>
+                                    </Button.Effect>
+                                </Button>
+
+                                <Button x:Name="btn_workFolderOpen" Content="작업폴더 열기" 
+                                        Margin="20 0 0 0" Width="100" Height="25"                      
+                                        Background="Ivory"        
+                                        HorizontalAlignment="Left"   
+                                        Click="btn_workFolderOpen_Click"
+                                        UseLayoutRounding="True">
+                                    <Button.Effect>
+                                        <DropShadowEffect ShadowDepth="2" Direction="315" Color="Black" Opacity="0.5"/>
+                                    </Button.Effect>
+                                </Button>
+                            </StackPanel>
+
+                        </StackPanel>
+                    </GroupBox>
+
+                    <GroupBox>
+                        <GroupBox.Header>
+                            <Label Content="1개 결과 확인"/>
+                        </GroupBox.Header>
+                        <StackPanel>
+                            <Label Content="Raw 데이터"/>
+                            <DataGrid Name="dg_raw_result" Margin="5 5 5 0" ItemsSource="{Binding}"
+                                      FontSize="14" Width="550" Height="410" HorizontalAlignment="Stretch" 
+                                      SelectionUnit="Cell" IsReadOnly="True"/>
+
+                            <Label Content="불순물 데이터" Margin="0 5 0 0"/>
+                            <DataGrid Name="dg_imp_result" Margin="5 5 5 0" ItemsSource="{Binding}"
+                                      FontSize="14" Width="550" Height="410" HorizontalAlignment="Stretch"
+                                      SelectionUnit="Cell" IsReadOnly="True"/>
+
+                        </StackPanel>
+                    </GroupBox>
 
                 </StackPanel>
             </TabItem>

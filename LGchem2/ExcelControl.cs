@@ -15,6 +15,7 @@ using static System.Net.Mime.MediaTypeNames;
 using System.Data;
 using System.Windows.Media;
 using System.IO.Ports;
+using static LGchem2.ExcelControl;
 
 namespace LGchem2
 {
@@ -25,7 +26,7 @@ namespace LGchem2
             spcOut, spcIn, lclOut, nospc
         }
 
-        public void DataTableToExcel(DataTable dt, string path, int cell_row, int cell_col, Spec spec, string pdf_path = null)
+        public void DataTableToExcel(DataTable dt, string path, string sheetName, int cell_row, int cell_col, Spec spec, string pdf_path = null)
         {
             Excel.Application application = null;
             Workbook workBook = null;            
@@ -38,13 +39,26 @@ namespace LGchem2
                 application.Visible = false;
                 //파일로부터 불러오기
                 workBook = application.Workbooks.Open(path);
-                Worksheet worksheet = workBook.ActiveSheet;
+                //Worksheet worksheet = workBook.ActiveSheet;
+                Worksheet worksheet = workBook.Worksheets.Item[sheetName];
+
+                worksheet.Columns[1].ColumnWidth = 13;
 
                 //파일명
                 if (pdf_path != null)                
                     worksheet.Cells[cell_row, cell_col] = Path.GetFileName(pdf_path);                    
                 
                 cell_row++;
+
+                //RRT 테이블 Peak 스펙인아웃 판정
+                if (spec == Spec.spcOut && pdf_path == null)
+                {                    
+                    worksheet.Cells[cell_row, cell_col].Offset[5, 1].Font.ColorIndex = 3;
+                }
+                else if (spec == Spec.lclOut && pdf_path == null)
+                {
+                    worksheet.Cells[cell_row, cell_col].Cells.Offset[5, 1].Font.ColorIndex = 5;
+                }
 
                 Range rng = worksheet.Range[worksheet.Cells[cell_row, cell_col], worksheet.Cells[cell_row + dt.Rows.Count, cell_col + dt.Columns.Count - 1]];
 
@@ -63,18 +77,51 @@ namespace LGchem2
                     }
                 }
 
-                //RRT 테이블 Peak 스펙인아웃 판정
-                if (spec == Spec.spcOut)
-                {
-                    rng.Cells.Offset[5, 1].Interior.ColorIndex = 3;
-                }
-                else if (spec == Spec.lclOut)
-                {
-                    rng.Cells.Offset[5, 1].Interior.ColorIndex = 5;
-                }
-
                 this.RangeBorder(rng);
-                if (pdf_path != null) this.ExcelInsertOLE(worksheet, pdf_path, cell_row + dt.Rows.Count);
+                if (pdf_path != null) this.ExcelInsertOLE(worksheet, pdf_path, cell_row - 2);
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+            }
+            finally
+            {
+                object missing = Type.Missing;
+                object noSave = true;
+                workBook.Close(noSave, missing, missing); // 엑셀 워크북 종료
+                application.Quit();        // 엑셀 어플리케이션 종료
+
+                //오브젝트 해제
+                Global.ReleaseExcelObject(workBook);
+                Global.ReleaseExcelObject(application);
+            }
+        }
+        public void SheetNameChange(string path, int pos, string name)
+        {
+            Excel.Application application = null;
+            Workbook workBook = null;
+
+            try
+            {
+                //Excel 프로그램 실행
+                application = new Excel.Application();
+                //Excel 화면 띄우기 옵션
+                application.Visible = false;
+                //파일로부터 불러오기
+                workBook = application.Workbooks.Open(path);
+                if (workBook.Sheets.Count == 1 && workBook.Sheets.Count == pos)
+                {
+                    Worksheet worksheet = workBook.Worksheets[pos];
+                    worksheet.Name = name;
+                }
+                else if (workBook.Sheets.Count < pos)
+                {
+                    //Worksheet worksheet = workBook.Worksheets.Add(Type.Missing, workBook.Worksheets[workBook.Sheets.Count + 1]);
+                    Worksheet worksheet = workBook.Worksheets.Add(After: workBook.Sheets[workBook.Sheets.Count]) as Excel.Worksheet;
+                    worksheet.Name = name;
+                }
+                
             }
             catch (Exception ex)
             {
@@ -146,13 +193,14 @@ namespace LGchem2
                 path,           // Filename
                 false,           // Link
                 true,           // DisplayAsIcon
-                @"C:\Users\USER\Desktop\코드\a.ico",   // IconFileName
+                @"test",   // IconFileName
                 0,   // IconIndex
-                Path.GetFileName(path),   // IconLabel
-                55,   // Left
+                "PDF File",   // IconLabel
+                //55,   // Left
+                5,   // Left
                 16.5 * cell_row,   // Top
-                50,   // Width
-                50    // Height
+                10,   // Width
+                10    // Height
             );
         }
 

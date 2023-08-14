@@ -21,6 +21,8 @@ using System.Windows.Threading;
 using Path = System.IO.Path;
 using Excel = Microsoft.Office.Interop.Excel;
 using System.Reflection.Emit;
+using java.security.cert;
+using Microsoft.WindowsAPICodePack.Dialogs;
 
 namespace LGchem2
 {
@@ -29,51 +31,68 @@ namespace LGchem2
     /// </summary>
     public partial class MainWindow : Window
     {
-        private string basic_path = @"C:\LGchem2";
-        private string result_path = @"C:\LGchem2\Result";
-        private string ref_path = @"C:\LGchem2\Ref";
-        private string refExcel_path = @"C:\LGchem2\Ref\Ref.xlsx";
+        private string basic_path;
+        private string result_path;
+        private string ref_path;
+        private string refExcel_path;
         private Dictionary<string, DataTable> dic_ref = new Dictionary<string, DataTable>();
         private Pgb_Val pgb_val = new Pgb_Val();
+        string cur_path = System.IO.Directory.GetCurrentDirectory();
+        List<Model_pdf> model_Pdfs = new List<Model_pdf>();
 
         public MainWindow()
         {
             InitializeComponent();
-            DirectoryInfo dic = new DirectoryInfo(basic_path);
-            if (!dic.Exists) dic.Create();
 
-            dic = new DirectoryInfo(result_path);
-            if (!dic.Exists) dic.Create();
+            this.Spin_Control.Visibility = Visibility.Hidden;            
 
-            dic = new DirectoryInfo(ref_path);
-            if (!dic.Exists) dic.Create();
+            FileInfo fileInfo = new FileInfo(cur_path + "\\tar_path.txt");
+            if (!fileInfo.Exists)
+            {
+                File.WriteAllText(fileInfo.FullName, "", Encoding.UTF8);
+            }
+            this.tb_workFolder.Text = File.ReadAllText(fileInfo.FullName);
+
+            WorkFolderValidate();
 
             this.pgb_run.DataContext = pgb_val;
             this.pgb_text.DataContext = pgb_val;
 
-            //this.Loaded += new RoutedEventHandler(MainPage_Loaded);
+            //this.Loaded += new RoutedEventHandler(MainPage_Loaded);            
+        }
 
-            ////pdf test
-            //string path = @"C:\Users\USER\Desktop\코드\lgchem_sample\230809\LG-008(W)\LG-008@008P23002@C[99.802%].pdf";
+        private void WorkFolderValidate()
+        {
+            string work_folder = this.tb_workFolder.Text;
+            try
+            {
+                DirectoryInfo dic = new DirectoryInfo(work_folder);
+                if (dic.Exists)
+                {
+                    basic_path = $"{work_folder}\\LGchem2";
+                    result_path = $"{work_folder}\\LGchem2\\Result";
+                    ref_path = $"{work_folder}\\LGchem2\\Ref";
+                    refExcel_path = $"{work_folder}\\LGchem2\\Ref\\Ref.xlsx";
 
-            //MakeTable_LGD makeTable_LGD = new MakeTable_LGD();
-            //MakeTable_SDC makeTable_SDC = new MakeTable_SDC();
-            //MakeTableAll makeTableAll = new MakeTableAll();
+                    dic = new DirectoryInfo(basic_path);
+                    if (!dic.Exists) dic.Create();
 
-            //DataTable dt_raw = new DataTable();
-            //try
-            //{
-            //    dt_raw = makeTableAll.GetRawTable(makeTable_LGD, path);                
-            //}
-            //catch (System.IndexOutOfRangeException)
-            //{
-            //    dt_raw = makeTableAll.GetRawTable(makeTable_SDC, path);
-            //}
-            ////double형으로 변환
-            //dt_raw = makeTableAll.ConverDoubleTable(dt_raw);
+                    dic = new DirectoryInfo(result_path);
+                    if (!dic.Exists) dic.Create();
 
-            ////RRT 테이블 생성
-            //dt_raw = makeTableAll.MakeRRTColumn(dt_raw);
+                    dic = new DirectoryInfo(ref_path);
+                    if (!dic.Exists) dic.Create();
+                }
+                else
+                {
+                    MessageBox.Show("존재하는 폴더로 다시 선택하세요");
+                }
+            }
+            catch (System.ArgumentException)
+            {
+                //pass
+            }
+            
         }
 
         private void MainPage_Loaded(object sender, RoutedEventArgs e)
@@ -99,15 +118,27 @@ namespace LGchem2
                 if (ofdlg.ShowDialog().GetValueOrDefault())
                 {
                     List<string> list_pdf = ofdlg.FileNames.ToList();
-
-                    List<Model_pdf> model_Pdfs = new List<Model_pdf>();
+                    
                     foreach (string file in list_pdf)
                     {
                         model_Pdfs.Add(new Model_pdf() { pdf_name = Path.GetFileName(file), pdf_path = file });
                     }
                     this.list_pdf.DataContext = model_Pdfs;
+                    this.list_pdf.Items.Refresh();
                 }
             }
+        }
+
+        private void list_pdf_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (this.list_pdf.SelectedItems.Count == 0) return;
+
+            foreach (var item in this.list_pdf.SelectedItems)
+            {
+                var cast_item = (Model_pdf)item;
+                model_Pdfs.Remove(cast_item);                
+            }
+            this.list_pdf.Items.Refresh();
         }
 
         private void btn_run_Click(object sender, RoutedEventArgs e)
@@ -125,6 +156,7 @@ namespace LGchem2
                 MessageBox.Show("RRT 한계값은 실수가 입력되어야 합니다.");
                 return;
             }
+            this.tb_result_path.Text = "";
 
             List<string> list_path = new List<string>();
             foreach (var item in this.list_pdf.Items) list_path.Add(((Model_pdf)item).pdf_path);
@@ -132,13 +164,21 @@ namespace LGchem2
             Dictionary<string, object> dic_src = new Dictionary<string, object>();
             dic_src.Add("limit", limit);
             dic_src.Add("list_path", list_path);
+                        
+            this.dg_raw_result.DataContext = null;
+            this.dg_imp_result.DataContext = null;
+            this.Spin_Control.Visibility = Visibility.Visible;
 
-            this.pgb_run.IsIndeterminate = true;
-            
             //PDF 만들기
             Thread th = new Thread(new ParameterizedThreadStart(th_pdf));
             th.IsBackground = true;
             th.Start(dic_src);
+        }
+
+        private void PgbControl(double val, string str)
+        {
+            pgb_val.val = val;
+            pgb_val.str = str;
         }
 
         private void th_pdf(object o)
@@ -150,11 +190,13 @@ namespace LGchem2
 
             ExcelControl excelControl = new ExcelControl();
 
+            double pgb_all_val = list_path.Count * 4;
+            double pgb_sep_val = 0;
+
             //pdf 반복
             foreach (string path in list_path)
             {
-                string fileName = Path.GetFileName(path);
-                Debug.WriteLine("good");
+                string fileName = Path.GetFileName(path);                
 
                 //1. pdf 변환
                 MakeRawTable_LGD makeTable_LGD = new MakeRawTable_LGD();
@@ -171,6 +213,8 @@ namespace LGchem2
                     dt_raw = makeTableAll.GetRawTable(makeTable_SDC, path);
                 }
 
+                PgbControl(((list_path.IndexOf(path) + 1) / pgb_all_val) * 100, $"{fileName} raw 데이터테이블 생성완료");                
+
                 //2. 레퍼런스 체크 : 엑셀 시트명이 파일명의 골뱅이 앞에 있는 문자열에 속해야함
                 //3. rrt 테이블 생성
                 
@@ -181,25 +225,38 @@ namespace LGchem2
                 {
                     string key = "";
                     DataTable dt_val = new DataTable();
-                    (key, dt_val) = excelControl.GetDic_SheetContentTable(refExcel_path, Path.GetFileName(path).Split('@')[0]);
+                    (key, dt_val) = excelControl.GetDic_SheetContentTable(refExcel_path, Path.GetFileName(path).Split('@')[0]);                    
                     if (key != "") dic_ref.Add(key, dt_val);
                 }
 
                 DataTable dt_ref = null;
+                double? spc = null;
+                double? lcl = null;
+                
                 //그 재료가 레퍼런스에 속하는지 검사해서 속하면 임퓨리티 테이블 생성
                 if (Global.ChkStrInDicKey(fileName.Split('@')[0], dic_ref))
-                {
+                {   
                     //레퍼런스에 있을때 불순물 테이블 만듬
                     dt_ref = Global.GetdtInDicKey(fileName.Split('@')[0], dic_ref);
-                    dt_imp = makeTableAll.MakeImpurityTable(dt_raw, dt_ref, limit);
+                    double temp;
+                    if (dt_ref.Rows[2][1].ToString() == "") spc = null;
+                    else if (Double.TryParse(dt_ref.Rows[2][1].ToString(), out temp)) spc = temp;
+                    else spc = null;                    
+
+                    if (dt_ref.Rows[3][1].ToString() == "") lcl = null;
+                    else if (Double.TryParse(dt_ref.Rows[3][1].ToString(), out temp)) lcl = temp;
+                    else lcl = null;
+
+                    dt_imp = makeTableAll.MakeImpurityTable(dt_raw, dt_ref, limit);                    
                 }
                 else
                 {
                     dt_imp = null;
                 }
 
+                PgbControl(((list_path.IndexOf(path) + 2) / pgb_all_val) * 100, $"{fileName} imp 데이터테이블 생성완료");
                 //list에 담기
-                list_pdfdt.Add(new PdfDt() { pdf_path = path, pdf_name = fileName, dt_raw = dt_raw, dt_imp = dt_imp, dt_ref = dt_ref });
+                list_pdfdt.Add(new PdfDt() { pdf_path = path, pdf_name = fileName, dt_raw = dt_raw, dt_imp = dt_imp, dt_ref = dt_ref, spc = spc, lcl = lcl });
             }
             
             string excelFileName = "";
@@ -207,66 +264,130 @@ namespace LGchem2
             {
                 excelFileName = $"{result_path}\\result_{DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss")}.xlsx";
                 excelControl.SaveExcelFile(excelFileName);
+                excelControl.SheetNameChange(excelFileName, 1, "Main");
+                excelControl.SheetNameChange(excelFileName, 2, "SPC");
             }
 
             int row_Idx = 2;
             int col_rawIdx = 2;
             int col_impIdx = 10;
+
+            DataTable dt_spc = new DataTable();            
             
             foreach (PdfDt item in list_pdfdt)
             {
                 //4. raw테이블과 rrt 테이블 배치하기
                 //5. pdf 첨부
-                ExcelControl.Spec spc = new ExcelControl.Spec();
-                Global.print_DataTable(item.dt_ref);
+                ExcelControl.Spec spc = new ExcelControl.Spec();                                
                 if (item.dt_ref == null) spc = ExcelControl.Spec.nospc;
                 else
-                {
-                    if (item.dt_ref.Rows[2][0].ToString() == "" || item.dt_ref.Rows[3][0].ToString() == "")
+                {                    
+                    double peak_val = double.Parse(item.dt_imp.Rows[4]["Peak"].ToString());                    
+
+                    if (item.lcl == null || item.spc == null)
                     {
                         spc = ExcelControl.Spec.nospc;
                     }
-                    double peak_val = double.Parse(item.dt_imp.Rows[4]["Peak"].ToString());
-                    double lcl;
-                    double spec;
-
-                    if (!Double.TryParse(item.dt_ref.Rows[2][1].ToString(), out spec) || Double.TryParse(item.dt_ref.Rows[3][1].ToString(), out lcl))
+                    else if (item.lcl >= item.spc)
                     {
-                        spc = ExcelControl.Spec.nospc;
+                        if (peak_val >= item.lcl) spc = ExcelControl.Spec.spcIn;
+                        else if (peak_val >= item.spc) spc = ExcelControl.Spec.lclOut;
+                        else spc = ExcelControl.Spec.spcOut;
                     }
                     else
                     {
-                        spec = Double.Parse(item.dt_ref.Rows[2][1].ToString());
-                        lcl = Double.Parse(item.dt_ref.Rows[3][1].ToString());
-
-                        if (peak_val >= lcl) spc = ExcelControl.Spec.spcIn;
-                        else if (peak_val >= spec) spc = ExcelControl.Spec.lclOut;
-                        else spc = ExcelControl.Spec.spcOut;
+                        spc = ExcelControl.Spec.nospc;
                     }
                 }
-                
-                Debug.WriteLine(item.pdf_name);
-                Debug.WriteLine(item.pdf_path);
-                Global.print_DataTable(item.dt_raw);
-                Global.print_DataTable(item.dt_imp);
 
-                excelControl.DataTableToExcel(item.dt_raw, excelFileName, row_Idx, col_rawIdx, spc, item.pdf_path);
-                excelControl.DataTableToExcel(item.dt_imp, excelFileName, row_Idx, col_impIdx, spc);
+                excelControl.DataTableToExcel(item.dt_raw, excelFileName, "Main", row_Idx, col_rawIdx, spc, item.pdf_path);
+                PgbControl(((list_path.Count * 2 + list_pdfdt.IndexOf(item) + 1) / pgb_all_val) * 100, $"{item.pdf_name} raw 엑셀 생성완료");
 
-                if (item.dt_raw.Rows.Count >= item.dt_imp.Rows.Count) row_Idx += item.dt_raw.Rows.Count + 7;
-                else row_Idx += item.dt_imp.Rows.Count + 5;
+                excelControl.DataTableToExcel(item.dt_imp, excelFileName, "Main", row_Idx, col_impIdx, spc);
+                PgbControl(((list_path.Count * 2 + list_pdfdt.IndexOf(item) + 2) / pgb_all_val) * 100, $"{item.pdf_name} raw 엑셀 생성완료");
+
+                if (item.dt_raw.Rows.Count >= item.dt_imp.Rows.Count) row_Idx += item.dt_raw.Rows.Count + 3;
+                else row_Idx += item.dt_imp.Rows.Count + 3;
+            }            
+
+            if (list_pdfdt.Count == 1)
+            {
+                Dispatcher.Invoke(DispatcherPriority.Normal, new Action(delegate
+                {
+                    this.dg_raw_result.DataContext = list_pdfdt[0].dt_raw;
+                    this.dg_imp_result.DataContext = list_pdfdt[0].dt_imp;
+                }));                
             }
-            Debug.WriteLine("good");
+
+            PgbControl(100, $"전체 완료");
 
             Dispatcher.Invoke(DispatcherPriority.Normal, new Action(delegate
-            {
-                this.pgb_run.IsIndeterminate = false;
+            {                
+                this.Spin_Control.Visibility = Visibility.Hidden;                
+                MessageBox.Show("완료되었습니다.");                
             }));
+
+            if (excelFileName != "")
+            {
+                Dispatcher.Invoke(DispatcherPriority.Normal, new Action(delegate
+                {
+                    this.tb_result_path.Text = excelFileName;
+                }));
+            }
         }
 
         private void btn_result_Click(object sender, RoutedEventArgs e)
         {
             Process.Start(result_path);
+        }
+
+        private void btn_workFolderSelect_Click(object sender, RoutedEventArgs e)
+        {
+            using (var dialog = new CommonOpenFileDialog())
+            {
+                dialog.IsFolderPicker = true;
+                if (dialog.ShowDialog() == CommonFileDialogResult.Ok)
+                {
+                    this.tb_workFolder.Text = dialog.FileName;
+
+                    FileInfo fileInfo = new FileInfo(cur_path + "\\tar_path.txt");                    
+                    File.WriteAllText(fileInfo.FullName, dialog.FileName, Encoding.UTF8);
+                    WorkFolderValidate();
+                }
+            }
+        }
+
+        private void btn_workFolderOpen_Click(object sender, RoutedEventArgs e)
+        {
+            try {  Process.Start(basic_path); }
+            catch { }            
+        }
+
+        private void btn_result_open_Click(object sender, RoutedEventArgs e)
+        {
+            try { Process.Start(this.tb_result_path.Text); }
+            catch { }
+        }
+
+        private void list_pdf_Drop(object sender, DragEventArgs e)
+        {
+            var files = (string[])e.Data.GetData(DataFormats.FileDrop);
+
+            foreach (string file in files)
+            {                
+                if (Path.GetExtension(file) != ".pdf") model_Pdfs.Add(new Model_pdf() { pdf_name = Path.GetFileName(file), pdf_path = file });
+            }
+            this.list_pdf.DataContext = model_Pdfs;
+            this.list_pdf.Items.Refresh();
+        }
+
+        private void list_pdf_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (this.list_pdf.SelectedItems.Count != 1) return;
+
+            Model_pdf model_Pdf = (Model_pdf)this.list_pdf.SelectedItem;
+            try { Process.Start(model_Pdf.pdf_path); }
+            catch { }
         }
     }
 }
