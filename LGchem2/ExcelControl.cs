@@ -42,12 +42,17 @@ namespace LGchem2
                 //Worksheet worksheet = workBook.ActiveSheet;
                 Worksheet worksheet = workBook.Worksheets.Item[sheetName];
 
-                worksheet.Columns[1].ColumnWidth = 13;
+                worksheet.Columns[1].ColumnWidth = 13;                
 
                 //파일명
                 if (pdf_path != null)                
-                    worksheet.Cells[cell_row, cell_col] = Path.GetFileName(pdf_path);                    
-                
+                    worksheet.Cells[cell_row, cell_col] = Path.GetFileName(pdf_path);
+
+                if (sheetName == "SPC")
+                    worksheet.Columns[2].AutoFit();
+                    
+
+
                 cell_row++;
 
                 //RRT 테이블 Peak 스펙인아웃 판정
@@ -79,6 +84,7 @@ namespace LGchem2
 
                 this.RangeBorder(rng);
                 if (pdf_path != null) this.ExcelInsertOLE(worksheet, pdf_path, cell_row - 2);
+                workBook.Worksheets[1].Activate();
 
             }
             catch (Exception ex)
@@ -251,7 +257,7 @@ namespace LGchem2
                     }
                     key = workSheet.Name;
                     val = temp_rst;                    
-                }
+                }           
             }
             catch (Exception ex)
             {
@@ -298,9 +304,7 @@ namespace LGchem2
                     }
 
                     flag_dtcolumn++;
-
                 }
-
                 return table;
             }
             catch

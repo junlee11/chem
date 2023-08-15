@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:LGchem2"
         mc:Ignorable="d"
-        Title="LGChem2" Width="1550"
+        Title="LGChem2" Width="1550" Height="900"
         WindowStartupLocation="CenterScreen"
         UseLayoutRounding="True"
         ResizeMode="CanMinimize">
@@ -85,7 +85,7 @@
                             <StackPanel Orientation="Horizontal">
                                 <Grid HorizontalAlignment="Stretch">
                                     <ListView Name="list_pdf" Margin="5 10 10 0" ItemsSource="{Binding}"
-                                              SelectionMode="Extended" Width="900" Height="820" 
+                                              SelectionMode="Extended" Width="900" Height="660" 
                                               FontSize="14"
                                               KeyDown="list_pdf_KeyDown"
                                               AllowDrop="True"
@@ -140,12 +140,12 @@
                         <StackPanel>
                             <Label Content="Raw 데이터"/>
                             <DataGrid Name="dg_raw_result" Margin="5 5 5 0" ItemsSource="{Binding}"
-                                      FontSize="14" Width="550" Height="410" HorizontalAlignment="Stretch" 
+                                      FontSize="14" Width="550" Height="350" HorizontalAlignment="Stretch" 
                                       SelectionUnit="Cell" IsReadOnly="True"/>
 
                             <Label Content="불순물 데이터" Margin="0 5 0 0"/>
                             <DataGrid Name="dg_imp_result" Margin="5 5 5 0" ItemsSource="{Binding}"
-                                      FontSize="14" Width="550" Height="410" HorizontalAlignment="Stretch"
+                                      FontSize="14" Width="550" Height="350" HorizontalAlignment="Stretch"
                                       SelectionUnit="Cell" IsReadOnly="True"/>
 
                         </StackPanel>

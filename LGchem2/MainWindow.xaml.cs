@@ -23,6 +23,7 @@ using Excel = Microsoft.Office.Interop.Excel;
 using System.Reflection.Emit;
 using java.security.cert;
 using Microsoft.WindowsAPICodePack.Dialogs;
+using static LGchem2.ExcelControl;
 
 namespace LGchem2
 {
@@ -36,6 +37,8 @@ namespace LGchem2
         private string ref_path;
         private string refExcel_path;
         private Dictionary<string, DataTable> dic_ref = new Dictionary<string, DataTable>();
+        private Dictionary<string, double?> dic_ref_spc = new Dictionary<string, double?>();
+        private Dictionary<string, double?> dic_ref_lcl = new Dictionary<string, double?>();
         private Pgb_Val pgb_val = new Pgb_Val();
         string cur_path = System.IO.Directory.GetCurrentDirectory();
         List<Model_pdf> model_Pdfs = new List<Model_pdf>();
@@ -191,7 +194,6 @@ namespace LGchem2
             ExcelControl excelControl = new ExcelControl();
 
             double pgb_all_val = list_path.Count * 4;
-            double pgb_sep_val = 0;
 
             //pdf 반복
             foreach (string path in list_path)
@@ -213,7 +215,7 @@ namespace LGchem2
                     dt_raw = makeTableAll.GetRawTable(makeTable_SDC, path);
                 }
 
-                PgbControl(((list_path.IndexOf(path) + 1) / pgb_all_val) * 100, $"{fileName} raw 데이터테이블 생성완료");                
+                PgbControl(((list_path.IndexOf(path) + 1) / pgb_all_val) * 90, $"{fileName} raw 데이터테이블 생성완료");                
 
                 //2. 레퍼런스 체크 : 엑셀 시트명이 파일명의 골뱅이 앞에 있는 문자열에 속해야함
                 //3. rrt 테이블 생성
@@ -221,13 +223,13 @@ namespace LGchem2
                 DataTable dt_imp = new DataTable();
 
                 //dic_ref에 재료에 해당하는 레퍼런스 dt 있는지 검사해서 최초이면 레퍼런스 적재
-                if (!Global.ChkStrInDicKey(fileName.Split('@')[0], dic_ref))
-                {
-                    string key = "";
-                    DataTable dt_val = new DataTable();
-                    (key, dt_val) = excelControl.GetDic_SheetContentTable(refExcel_path, Path.GetFileName(path).Split('@')[0]);                    
-                    if (key != "") dic_ref.Add(key, dt_val);
-                }
+                string key = "";
+                
+                DataTable dt_val = new DataTable();
+                (key, dt_val) = excelControl.GetDic_SheetContentTable(refExcel_path, Path.GetFileName(path).Split('@')[0]);                    
+                if (key != "" && !Global.ChkStrInDicKey(fileName.Split('@')[0], dic_ref)) 
+                    dic_ref.Add(key, dt_val);
+                
 
                 DataTable dt_ref = null;
                 double? spc = null;
@@ -238,25 +240,33 @@ namespace LGchem2
                 {   
                     //레퍼런스에 있을때 불순물 테이블 만듬
                     dt_ref = Global.GetdtInDicKey(fileName.Split('@')[0], dic_ref);
-                    double temp;
-                    if (dt_ref.Rows[2][1].ToString() == "") spc = null;
-                    else if (Double.TryParse(dt_ref.Rows[2][1].ToString(), out temp)) spc = temp;
-                    else spc = null;                    
 
-                    if (dt_ref.Rows[3][1].ToString() == "") lcl = null;
-                    else if (Double.TryParse(dt_ref.Rows[3][1].ToString(), out temp)) lcl = temp;
-                    else lcl = null;
+                    double temp;
+                    //spc 
+                    if (!dic_ref_spc.ContainsKey(key))
+                    {                        
+                        if (dt_ref.Rows[2][1].ToString() == "") spc = null;
+                        else if (Double.TryParse(dt_ref.Rows[2][1].ToString(), out temp)) spc = temp;
+                        else spc = null;
+                        dic_ref_spc.Add(key, spc);
+                    }
+                    
+                    //lcl
+                    if (!dic_ref_lcl.ContainsKey(key))
+                    {
+                        if (dt_ref.Rows[3][1].ToString() == "") lcl = null;
+                        else if (Double.TryParse(dt_ref.Rows[3][1].ToString(), out temp)) lcl = temp;
+                        else lcl = null;
+                        dic_ref_lcl.Add(key, lcl);
+                    }
 
                     dt_imp = makeTableAll.MakeImpurityTable(dt_raw, dt_ref, limit);                    
                 }
-                else
-                {
-                    dt_imp = null;
-                }
+                else dt_imp = null;
 
-                PgbControl(((list_path.IndexOf(path) + 2) / pgb_all_val) * 100, $"{fileName} imp 데이터테이블 생성완료");
+                PgbControl(((list_path.IndexOf(path) + 2) / pgb_all_val) * 90, $"{fileName} imp 데이터테이블 생성완료");
                 //list에 담기
-                list_pdfdt.Add(new PdfDt() { pdf_path = path, pdf_name = fileName, dt_raw = dt_raw, dt_imp = dt_imp, dt_ref = dt_ref, spc = spc, lcl = lcl });
+                list_pdfdt.Add(new PdfDt() { pdf_path = path, pdf_name = fileName, dt_raw = dt_raw, dt_imp = dt_imp, dt_ref = dt_ref, spc = dic_ref_spc[key], lcl = dic_ref_lcl[key], ref_name = key });
             }
             
             string excelFileName = "";
@@ -272,43 +282,71 @@ namespace LGchem2
             int col_rawIdx = 2;
             int col_impIdx = 10;
 
-            DataTable dt_spc = new DataTable();            
-            
+            DataTable dt_spc = new DataTable();
+            Dictionary<string, DataTable> dic_spc = new Dictionary<string, DataTable>();
+
+            //spc용 dic 생성
+            foreach (KeyValuePair<string, DataTable> items in dic_ref) if (!dic_spc.ContainsKey(items.Key)) dic_spc.Add(items.Key, null);
+            foreach (PdfDt item in list_pdfdt)
+            {
+                //Spc 테이블 뼈대 만들기                
+                if (dic_spc.ContainsKey(item.ref_name))
+                {
+                    if (dic_spc[item.ref_name] == null || dic_spc[item.ref_name].Columns.Count < item.dt_imp.Columns.Count)
+                    {
+                        dic_spc[item.ref_name] = item.dt_imp.Clone();
+                        dic_spc[item.ref_name].ImportRow(item.dt_imp.Rows[0]);      //Ref RT
+                        dic_spc[item.ref_name].ImportRow(item.dt_imp.Rows[1]);      //Ref RRT
+                    }                        
+                }
+            }
+
             foreach (PdfDt item in list_pdfdt)
             {
                 //4. raw테이블과 rrt 테이블 배치하기
-                //5. pdf 첨부
+                //5. pdf 첨부                
                 ExcelControl.Spec spc = new ExcelControl.Spec();                                
                 if (item.dt_ref == null) spc = ExcelControl.Spec.nospc;
                 else
                 {                    
                     double peak_val = double.Parse(item.dt_imp.Rows[4]["Peak"].ToString());                    
 
-                    if (item.lcl == null || item.spc == null)
-                    {
-                        spc = ExcelControl.Spec.nospc;
-                    }
+                    if (item.lcl == null || item.spc == null) spc = ExcelControl.Spec.nospc;                    
                     else if (item.lcl >= item.spc)
                     {
                         if (peak_val >= item.lcl) spc = ExcelControl.Spec.spcIn;
                         else if (peak_val >= item.spc) spc = ExcelControl.Spec.lclOut;
                         else spc = ExcelControl.Spec.spcOut;
                     }
-                    else
-                    {
-                        spc = ExcelControl.Spec.nospc;
-                    }
+                    else spc = ExcelControl.Spec.nospc;                    
                 }
 
                 excelControl.DataTableToExcel(item.dt_raw, excelFileName, "Main", row_Idx, col_rawIdx, spc, item.pdf_path);
-                PgbControl(((list_path.Count * 2 + list_pdfdt.IndexOf(item) + 1) / pgb_all_val) * 100, $"{item.pdf_name} raw 엑셀 생성완료");
+                PgbControl(((list_path.Count * 2 + list_pdfdt.IndexOf(item) + 1) / pgb_all_val) * 90, $"{item.pdf_name} raw 테이블 엑셀 생성완료");
 
                 excelControl.DataTableToExcel(item.dt_imp, excelFileName, "Main", row_Idx, col_impIdx, spc);
-                PgbControl(((list_path.Count * 2 + list_pdfdt.IndexOf(item) + 2) / pgb_all_val) * 100, $"{item.pdf_name} raw 엑셀 생성완료");
+                PgbControl(((list_path.Count * 2 + list_pdfdt.IndexOf(item) + 2) / pgb_all_val) * 90, $"{item.pdf_name} imp 테이블 엑셀 생성완료");
 
                 if (item.dt_raw.Rows.Count >= item.dt_imp.Rows.Count) row_Idx += item.dt_raw.Rows.Count + 3;
                 else row_Idx += item.dt_imp.Rows.Count + 3;
-            }            
+
+                //Spc 테이블 만들기
+                if (dic_spc.ContainsKey(item.ref_name))
+                {   
+                    DataRow dr = item.dt_imp.Rows[4];
+                    dr[0] = item.pdf_name;
+                    dic_spc[item.ref_name].ImportRow(dr);
+                }
+            }
+
+            //6. SPC 적재
+            row_Idx = 1;
+            col_impIdx = 1;
+            foreach (KeyValuePair<string, DataTable> items in dic_spc)
+            {
+                excelControl.DataTableToExcel(items.Value, excelFileName, "SPC", row_Idx, col_rawIdx, Spec.nospc);
+                row_Idx = row_Idx + items.Value.Rows.Count + 2;
+            }
 
             if (list_pdfdt.Count == 1)
             {
@@ -320,13 +358,6 @@ namespace LGchem2
             }
 
             PgbControl(100, $"전체 완료");
-
-            Dispatcher.Invoke(DispatcherPriority.Normal, new Action(delegate
-            {                
-                this.Spin_Control.Visibility = Visibility.Hidden;                
-                MessageBox.Show("완료되었습니다.");                
-            }));
-
             if (excelFileName != "")
             {
                 Dispatcher.Invoke(DispatcherPriority.Normal, new Action(delegate
@@ -334,6 +365,12 @@ namespace LGchem2
                     this.tb_result_path.Text = excelFileName;
                 }));
             }
+
+            Dispatcher.Invoke(DispatcherPriority.Normal, new Action(delegate
+            {                
+                this.Spin_Control.Visibility = Visibility.Hidden;
+                MessageBox.Show("완료되었습니다.");                
+            }));
         }
 
         private void btn_result_Click(object sender, RoutedEventArgs e)
@@ -375,7 +412,7 @@ namespace LGchem2
 
             foreach (string file in files)
             {                
-                if (Path.GetExtension(file) != ".pdf") model_Pdfs.Add(new Model_pdf() { pdf_name = Path.GetFileName(file), pdf_path = file });
+                if (Path.GetExtension(file).ToUpper() == ".PDF") model_Pdfs.Add(new Model_pdf() { pdf_name = Path.GetFileName(file), pdf_path = file });
             }
             this.list_pdf.DataContext = model_Pdfs;
             this.list_pdf.Items.Refresh();
