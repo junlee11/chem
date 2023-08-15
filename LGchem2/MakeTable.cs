@@ -193,28 +193,29 @@ namespace LGchem2
         public DataTable MakeImpurityTable(DataTable dt_raw, DataTable dt_ref, decimal limit)
         {
             DataTable dt_ref_raw = dt_ref.Copy();
-            while (dt_ref.Rows.Count > 2) dt_ref.Rows.RemoveAt(2);
+            DataTable dt_ref_raw_AllRow = dt_ref_raw.Copy();
+            while (dt_ref_raw.Rows.Count > 2) dt_ref_raw.Rows.RemoveAt(2);
             int? peak_idx = Global.VlookupDt_Int(dt_raw, Convert.ToDouble(dt_raw.AsEnumerable().Max(row => row["Area"])), "Area", "Index");
             
-            DataTable dt_abs = dt_ref.Clone();
+            DataTable dt_abs = dt_ref_raw.Clone();
             foreach (DataRow dr in dt_raw.Rows)
             {
                 //Peak 인덱스는 제외
                 if (dt_raw.Rows.IndexOf(dr) == peak_idx) continue;
                 DataRow new_dr = dt_abs.NewRow();
-                for (int i = 0;i<dt_ref.Columns.Count;i++)
+                for (int i = 0;i<dt_ref_raw.Columns.Count;i++)
                 {
                     if (i == 0) new_dr[i] = $"{(dt_raw.Rows.IndexOf(dr) + 1).ToString()}";
-                    else new_dr[i] = Math.Abs(De(dr["RRT"].ToString()) - De(dt_ref.Rows[1][i].ToString()));
+                    else new_dr[i] = Math.Abs(De(dr["RRT"].ToString()) - De(dt_ref_raw.Rows[1][i].ToString()));
                 }
                 dt_abs.Rows.Add(new_dr);
             }
 
-            DataTable dt_absChk = dt_ref.Clone();
+            DataTable dt_absChk = dt_ref_raw.Clone();
             foreach (DataRow dr in dt_abs.Rows)
             {   
                 DataRow new_dr = dt_absChk.NewRow();
-                for (int i =0;i<dt_ref.Columns.Count; i++)
+                for (int i =0;i<dt_ref_raw.Columns.Count; i++)
                 {
                     if (i == 0) new_dr[i] = dr[0].ToString();
                     else new_dr[i] = (De(dr[i].ToString()) <= limit) ? dr[i].ToString() : "";
@@ -222,7 +223,7 @@ namespace LGchem2
                 dt_absChk.Rows.Add(new_dr);
             }            
 
-            DataTable dt_imp = dt_ref.Clone();
+            DataTable dt_imp = dt_ref_raw.Clone();
             DataRow dr_imp = dt_imp.NewRow();
             dt_imp.Rows.Add(dr_imp);            
 
@@ -303,15 +304,15 @@ namespace LGchem2
             dr_imp["Peak"] = $"{peak_idx}";
             
             //RRT 등 넣기
-            Global.AddColDt_Index(dt_imp, "Item", 0);
+            Global.AddColDt_Index(dt_imp, "Item", 0);            
             dt_imp = AddItemRow(dt_imp, dt_raw, "% Area", 0);            
-            dt_imp = AddItemRow(dt_imp, dt_raw, "RRT", 0);
+            dt_imp = AddItemRow(dt_imp, dt_raw, "RRT", 0);            
             dt_imp = AddItemRow(dt_imp, dt_raw, "RT", 0);
-            
-            //dt_ref
-            dt_imp = AddItemRefRow(dt_imp, dt_ref_raw, "RRT", 0);
-            dt_imp = AddItemRefRow(dt_imp, dt_ref_raw, "RT", 0);
-            
+
+            //dt_ref            
+            dt_imp = AddItemRefRow(dt_imp, dt_ref_raw_AllRow, "RRT", 0);            
+            dt_imp = AddItemRefRow(dt_imp, dt_ref_raw_AllRow, "RT", 0);            
+
             for (int i = 0; i< dt_imp.Rows.Count; i++)
             {
                 if (i == 0) dt_imp.Rows[i][0] = "Ref RT";
@@ -328,7 +329,7 @@ namespace LGchem2
         private DataTable AddItemRefRow(DataTable dt_imp, DataTable dt_ref, string item, int pos)
         {
             DataRow new_dr = dt_imp.NewRow();
-            new_dr[0] = item;
+            new_dr[0] = item;            
             for (int i =1;i<dt_imp.Columns.Count; i++)
             {
                 if (dt_imp.Columns[i].ColumnName == "Peak")

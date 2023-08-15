@@ -134,14 +134,17 @@ namespace LGchem2
 
         private void list_pdf_KeyDown(object sender, KeyEventArgs e)
         {
-            if (this.list_pdf.SelectedItems.Count == 0) return;
-
-            foreach (var item in this.list_pdf.SelectedItems)
+            if (e.Key == Key.Delete)
             {
-                var cast_item = (Model_pdf)item;
-                model_Pdfs.Remove(cast_item);                
+                if (this.list_pdf.SelectedItems.Count == 0) return;
+
+                foreach (var item in this.list_pdf.SelectedItems)
+                {
+                    var cast_item = (Model_pdf)item;
+                    model_Pdfs.Remove(cast_item);
+                }
+                this.list_pdf.Items.Refresh();
             }
-            this.list_pdf.Items.Refresh();
         }
 
         private void btn_run_Click(object sender, RoutedEventArgs e)
@@ -239,8 +242,7 @@ namespace LGchem2
                 if (Global.ChkStrInDicKey(fileName.Split('@')[0], dic_ref))
                 {   
                     //레퍼런스에 있을때 불순물 테이블 만듬
-                    dt_ref = Global.GetdtInDicKey(fileName.Split('@')[0], dic_ref);
-
+                    dt_ref = Global.GetdtInDicKey(fileName.Split('@')[0], dic_ref);                    
                     double temp;
                     //spc 
                     if (!dic_ref_spc.ContainsKey(key))
@@ -260,7 +262,9 @@ namespace LGchem2
                         dic_ref_lcl.Add(key, lcl);
                     }
 
-                    dt_imp = makeTableAll.MakeImpurityTable(dt_raw, dt_ref, limit);                    
+                    dt_imp = makeTableAll.MakeImpurityTable(dt_raw, dt_ref, limit);    
+                    Global.print_DataTable(dt_imp);
+                    Global.print_DataTable(dt_ref);
                 }
                 else dt_imp = null;
 
@@ -293,16 +297,17 @@ namespace LGchem2
                 if (dic_spc.ContainsKey(item.ref_name))
                 {
                     if (dic_spc[item.ref_name] == null || dic_spc[item.ref_name].Columns.Count < item.dt_imp.Columns.Count)
-                    {
-                        dic_spc[item.ref_name] = item.dt_imp.Clone();
-                        dic_spc[item.ref_name].ImportRow(item.dt_imp.Rows[0]);      //Ref RT
-                        dic_spc[item.ref_name].ImportRow(item.dt_imp.Rows[1]);      //Ref RRT
-                    }                        
-                }
+                    {   
+                        dic_spc[item.ref_name] = item.dt_imp.Clone();                        
+                        dic_spc[item.ref_name].ImportRow(item.dt_imp.Rows[0]);      //Ref RT                        
+                        dic_spc[item.ref_name].ImportRow(item.dt_imp.Rows[1]);      //Ref RRT                        
+                    }
+                }                
             }
 
+
             foreach (PdfDt item in list_pdfdt)
-            {
+            {                
                 //4. raw테이블과 rrt 테이블 배치하기
                 //5. pdf 첨부                
                 ExcelControl.Spec spc = new ExcelControl.Spec();                                
@@ -329,14 +334,14 @@ namespace LGchem2
 
                 if (item.dt_raw.Rows.Count >= item.dt_imp.Rows.Count) row_Idx += item.dt_raw.Rows.Count + 3;
                 else row_Idx += item.dt_imp.Rows.Count + 3;
-
+                
                 //Spc 테이블 만들기
                 if (dic_spc.ContainsKey(item.ref_name))
-                {   
-                    DataRow dr = item.dt_imp.Rows[4];
-                    dr[0] = item.pdf_name;
+                {                    
+                    DataRow dr = item.dt_imp.Rows[4];                    
                     dic_spc[item.ref_name].ImportRow(dr);
-                }
+                    dic_spc[item.ref_name].Rows[dic_spc[item.ref_name].Rows.Count - 1][0] = item.pdf_name;                    
+                }                
             }
 
             //6. SPC 적재

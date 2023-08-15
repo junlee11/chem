@@ -9,6 +9,9 @@
         WindowStartupLocation="CenterScreen"
         UseLayoutRounding="True"
         ResizeMode="CanMinimize">
+    <Window.Resources>
+        <local:ChkeckToHeaderConverter x:Key="ChkeckToHeaderConverter"/>
+    </Window.Resources>
     <Grid Margin="10 10 10 10">
         <TabControl HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
             <TabItem Header="메인">
@@ -62,12 +65,12 @@
                                         <DropShadowEffect ShadowDepth="2" Direction="315" Color="Black" Opacity="0.5"/>
                                     </Button.Effect>
                                 </Button>
-                                <TextBox x:Name="tb_result_path" Width="200" VerticalContentAlignment="Center" FontSize="14" Margin="10 0 0 0"/>
+                                <TextBox x:Name="tb_result_path" Width="430" VerticalContentAlignment="Center" FontSize="14" Margin="10 0 0 0"/>
                             </StackPanel>
 
                             <StackPanel Orientation="Horizontal">
                                 <Grid Margin="5 10 0 0">
-                                    <ProgressBar x:Name="pgb_run" Width="850" Height="25" Minimum="0" Maximum="100" Value="{Binding val, UpdateSourceTrigger=PropertyChanged}" 
+                                    <ProgressBar x:Name="pgb_run" Width="875" Height="25" Minimum="0" Maximum="100" Value="{Binding val, UpdateSourceTrigger=PropertyChanged}" 
                                                  HorizontalAlignment="Left" IsIndeterminate="{Binding isindertate, UpdateSourceTrigger=PropertyChanged}"/>
                                     <TextBlock x:Name="pgb_text" HorizontalAlignment="Center" Margin="5 0 0 0"
                                        Text="{Binding str, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center"/>
@@ -138,14 +141,24 @@
                             <Label Content="1개 결과 확인"/>
                         </GroupBox.Header>
                         <StackPanel>
-                            <Label Content="Raw 데이터"/>
+                            <StackPanel Orientation="Horizontal">
+                                <Label Content="Raw 데이터" Margin="5 0 0 0 "/>
+                                <CheckBox x:Name="chk_raw_header" Content="칼럼명 복사 여부" Margin="5 6 0 0" IsChecked="True"/>
+                            </StackPanel>
+                            
                             <DataGrid Name="dg_raw_result" Margin="5 5 5 0" ItemsSource="{Binding}"
                                       FontSize="14" Width="550" Height="350" HorizontalAlignment="Stretch" 
+                                      ClipboardCopyMode="{Binding ElementName=chk_raw_header, Path=IsChecked, Converter={StaticResource ChkeckToHeaderConverter}}"
                                       SelectionUnit="Cell" IsReadOnly="True"/>
 
-                            <Label Content="불순물 데이터" Margin="0 5 0 0"/>
+                            <StackPanel Orientation="Horizontal">
+                                <Label Content="불순물 데이터" Margin="5 5 0 0"/>
+                                <CheckBox x:Name="chk_imp_header" Content="칼럼명 복사 여부" Margin="5 11 0 0" IsChecked="True"/>                                
+                            </StackPanel>
+                            
                             <DataGrid Name="dg_imp_result" Margin="5 5 5 0" ItemsSource="{Binding}"
                                       FontSize="14" Width="550" Height="350" HorizontalAlignment="Stretch"
+                                      ClipboardCopyMode="{Binding ElementName=chk_imp_header, Path=IsChecked, Converter={StaticResource ChkeckToHeaderConverter}}"
                                       SelectionUnit="Cell" IsReadOnly="True"/>
 
                         </StackPanel>
