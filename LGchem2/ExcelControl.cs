@@ -28,6 +28,7 @@ namespace LGchem2
 
         public void DataTableToExcel(DataTable dt, string path, string sheetName, int cell_row, int cell_col, Spec spec, string pdf_path = null)
         {
+            if (dt == null) return;
             Excel.Application application = null;
             Workbook workBook = null;            
 

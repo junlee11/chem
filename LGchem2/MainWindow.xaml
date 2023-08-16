@@ -160,14 +160,15 @@
                                       FontSize="14" Width="550" Height="350" HorizontalAlignment="Stretch"
                                       ClipboardCopyMode="{Binding ElementName=chk_imp_header, Path=IsChecked, Converter={StaticResource ChkeckToHeaderConverter}}"
                                       SelectionUnit="Cell" IsReadOnly="True"/>
-
                         </StackPanel>
                     </GroupBox>
 
                 </StackPanel>
             </TabItem>
             <TabItem Header="사용법">
-                
+                <TextBox x:Name="tb_tib" HorizontalAlignment="Stretch"
+                         VerticalAlignment="Stretch" Margin="5 5 5 5"
+                         IsReadOnly="True" FontSize="20"/>
             </TabItem>
         </TabControl>
     </Grid>

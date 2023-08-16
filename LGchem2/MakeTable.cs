@@ -190,18 +190,19 @@ namespace LGchem2
             return dt;
         }
 
-        public DataTable MakeImpurityTable(DataTable dt_raw, DataTable dt_ref, decimal limit)
+        public (DataTable, DataTable) MakeImpurityTable(DataTable dt_raw, DataTable dt_ref, decimal limit)
         {
             DataTable dt_ref_raw = dt_ref.Copy();
             DataTable dt_ref_raw_AllRow = dt_ref_raw.Copy();
             while (dt_ref_raw.Rows.Count > 2) dt_ref_raw.Rows.RemoveAt(2);
+            
             int? peak_idx = Global.VlookupDt_Int(dt_raw, Convert.ToDouble(dt_raw.AsEnumerable().Max(row => row["Area"])), "Area", "Index");
             
             DataTable dt_abs = dt_ref_raw.Clone();
             foreach (DataRow dr in dt_raw.Rows)
             {
                 //Peak 인덱스는 제외
-                if (dt_raw.Rows.IndexOf(dr) == peak_idx) continue;
+                if (dt_raw.Rows.IndexOf(dr) + 1 == peak_idx) continue;
                 DataRow new_dr = dt_abs.NewRow();
                 for (int i = 0;i<dt_ref_raw.Columns.Count;i++)
                 {
@@ -221,18 +222,89 @@ namespace LGchem2
                     else new_dr[i] = (De(dr[i].ToString()) <= limit) ? dr[i].ToString() : "";
                 }
                 dt_absChk.Rows.Add(new_dr);
-            }            
+            }
 
             DataTable dt_imp = dt_ref_raw.Clone();
             DataRow dr_imp = dt_imp.NewRow();
-            dt_imp.Rows.Add(dr_imp);            
-
-            //불순물정하기
+            dt_imp.Rows.Add(dr_imp);     
+            
+            /* 불순물 알고리즘
+             * 0. 표 생성 : dt_absChk표를 만듬 
+             *  - 임퓨리티 칼럼을 가지고 인덱스별로 Ref RRT - 인덱스 RRT의 차이가 limit이내인 값만 남겨서 표를 남김
+             *  - 값이 있으면 limit이내이므로 이 값으로만 불순물 표를 만들면 됨
+             * 1. 하나의 인덱스에서 행, 열에 하나만 속하는 값을 불순물로 먼저 확정 
+             * 2. 남은 인덱스를 가지고 인덱스 - rowCnt 딕셔너리 생성 (하나의 인덱스에서 하나의 임퓨리티에만 속하면 rowCnt = 1)
+             * 3. 남은 인덱스 중에서 하나의 임퓨리티에 속하는 값으로 불순물 확정, 위의 인덱스 - rowCnt 활용, rowCnt = 1인 값으로만 비교
+             * 4. 남은 인덱스 중에서 rowCnt = 2인 값을 가지고 최소 limit이내인 임퓨리티로 불순물 배정             
+              */
+            
+            //1. 행,열에 하나씩만 조건 만족하는 고유한 애들 먼저 정하기
             foreach (DataRow dr in dt_absChk.Rows)
-            {   
+            {
                 int row_cnt = 0;
                 int col_idx = 0;
-                for (int i = 1;i<dt_absChk.Columns.Count;i++)
+                for (int i = 1; i < dt_absChk.Columns.Count; i++)
+                {
+                    if (dr[i].ToString() != "")
+                    {
+                        row_cnt++;
+                        col_idx = i;
+                    }
+                }
+                if (row_cnt == 0)
+                {
+                    dt_imp = AddDtNewImp(dt_imp, dr[0].ToString());
+                }
+                else if (row_cnt == 1)
+                {
+                    //limit보다 낮은 abs값이 한 인덱스에 하나만 존재
+                    Dictionary<string, decimal> dict = new Dictionary<string, decimal>();
+                    for (int row = 0; row < dt_absChk.Rows.Count; row++)
+                    {
+                        if (dt_absChk.Rows[row][col_idx].ToString() != "")
+                        {
+                            dict.Add(dt_absChk.Rows[row][0].ToString(), De(dt_absChk.Rows[row][col_idx].ToString()));
+                        }
+                    }
+
+                    if (dict.Count == 1)
+                    {
+                        //고유불순물
+                        dr_imp[col_idx] = dr[0].ToString();
+                    }                    
+                }
+            }
+
+            //2. rowIdx - rowCnt Dictionary 생성
+            Dictionary<string, int> dic_rowIdxCnt = new Dictionary<string, int>();
+            foreach (DataRow dr in dt_absChk.Rows)
+            {
+                string idx_str = dr[0].ToString();
+                if (Global.ChkValInDataRow(dt_imp, 0, dr[0].ToString())) continue;
+
+                int row_cnt = 0;                
+                for (int i = 1; i < dt_absChk.Columns.Count; i++)
+                {
+                    if (dr[i].ToString() != "") row_cnt++;                    
+                }
+
+                dic_rowIdxCnt.Add(idx_str, row_cnt);
+            }
+
+            //3. 행은 하나만 속하고 열에 여러개 속하는 애들 정하기
+            foreach (DataRow dr in dt_absChk.Rows)
+            {
+                string idx_str = dr[0].ToString();
+                if (Global.ChkValInDataRow(dt_imp, 0, dr[0].ToString())) continue;
+
+                if (dr[0].ToString() == "16")
+                {
+                    Debug.WriteLine("good");
+                }
+
+                int row_cnt = 0;
+                int col_idx = 0;
+                for (int i = 1; i < dt_absChk.Columns.Count; i++)
                 {
                     if (dr[i].ToString() != "")
                     {
@@ -244,49 +316,83 @@ namespace LGchem2
                 if (row_cnt == 0)
                 {
                     dt_imp = AddDtNewImp(dt_imp, dr[0].ToString());
-                                     
-                }   
+                }
                 else if (row_cnt == 1)
-                {                   
+                {                    
+                    //이미 dt_imp의 그 열에 값이 있으면 생략                    
                     //limit보다 낮은 abs값이 한 인덱스에 하나만 존재
-                    Dictionary<string, decimal> dict = new Dictionary<string, decimal>();                    
-                    for (int row = 0;row< dt_absChk.Rows.Count;row++)
+                    Dictionary<string, decimal> dict = new Dictionary<string, decimal>();
+                    for (int row = 0; row < dt_absChk.Rows.Count; row++)
                     {
-                        if (dt_absChk.Rows[row][col_idx].ToString() != "")
+                        //if (Global.ChkValInDataRow(dt_imp, 0, dt_absChk.Rows[row][0].ToString())) continue;
+                        if (dt_absChk.Rows[row][col_idx].ToString() != "" && dic_rowIdxCnt[dt_absChk.Rows[row][0].ToString()] == 1)
                         {
-                            dict.Add(dt_absChk.Rows[row][0].ToString(), De(dt_absChk.Rows[row][col_idx].ToString()));                            
+                            dict.Add(dt_absChk.Rows[row][0].ToString(), De(dt_absChk.Rows[row][col_idx].ToString()));
                         }
                     }
 
-                    if (dict.Count == 1)
+                    string minValueKey = dict.Aggregate((x, y) => x.Value < y.Value ? x : y).Key;
+                    //한열에 두개                        
+                    //중복불순물
+                    if (dr[0].ToString() == minValueKey)
                     {
-                        //고유불순물
                         dr_imp[col_idx] = dr[0].ToString();
                     }
                     else
                     {
-                        //한열에 두개
-                        string minValueKey = dict.Aggregate((x, y) => x.Value < y.Value ? x : y).Key;
-                        //중복불순물
-                        if (dr[0].ToString() == minValueKey)
-                        {
-                            dr_imp[col_idx] = dr[0].ToString();
-                        }
-                        else
-                        {
-                            //신규
-                            dt_imp = AddDtNewImp(dt_imp, dr[0].ToString());
-                        }
+                        //신규
+                        dt_imp = AddDtNewImp(dt_imp, dr[0].ToString());
+                    }
+
+                    //if (dict.Count == 1)
+                    //{
+                    //    //고유불순물
+                    //    dr_imp[col_idx] = dr[0].ToString();
+                    //}
+                    //else if (dict.Count != 1)
+                    //{
+                    //    //한열에 두개
+                    //    string minValueKey = dict.Aggregate((x, y) => x.Value < y.Value ? x : y).Key;
+                    //    //중복불순물
+                    //    if (dr[0].ToString() == minValueKey)
+                    //    {
+                    //        dr_imp[col_idx] = dr[0].ToString();
+                    //    }
+                    //    else
+                    //    {
+                    //        //신규
+                    //        dt_imp = AddDtNewImp(dt_imp, dr[0].ToString());
+                    //    }
+                    //}                
+                }
+            }
+
+            //4. 예외적인 경우 처리, 우선순위는 행열 한개씩 들어가있는 고유한 애들이 우선 순위
+            foreach (DataRow dr in dt_absChk.Rows)
+            {
+                string idx_str = dr[0].ToString();
+                if (Global.ChkValInDataRow(dt_imp, 0, dr[0].ToString())) continue;
+
+                int row_cnt = 0;
+                int col_idx = 0;
+                for (int i = 1;i<dt_absChk.Columns.Count;i++)
+                {
+                    if (dr[i].ToString() != "")
+                    {
+                        row_cnt++;
+                        col_idx = i;
                     }
                 }
-                else
+                
+                if (row_cnt == 2)
                 {
-                    //한 행에 두개
+                    //한 행에 두개, 그런데 이미 있는 인덱스는 빼야함
                     //중복불순물
                     Dictionary<int, decimal> dict = new Dictionary<int, decimal>();
                     for (int col = 1; col < dt_absChk.Columns.Count; col++)
                     {
-                        if (dr[col].ToString() != "")
+                        //dt_imp에도 없는지 검사해야함                        
+                        if (dr[col].ToString() != "" && dt_imp.Rows[0][col].ToString() == "")
                         {
                             dict.Add(col, De(dr[col].ToString()));
                         }
@@ -323,7 +429,7 @@ namespace LGchem2
                 if (i == 5) dt_imp.Rows[i][0] = "Index";
             }
 
-            return dt_imp;
+            return (dt_imp, dt_absChk);
         }
 
         private DataTable AddItemRefRow(DataTable dt_imp, DataTable dt_ref, string item, int pos)

@@ -262,6 +262,14 @@ namespace LGchem2
             }
             return null;
         }
+        public static bool ChkValInDataRow(DataTable dt, int rowIdx, string val)
+        {
+            for (int i = 0;i<dt.Columns.Count;i++)
+            {
+                if (dt.Rows[rowIdx][i].ToString() == val) return true;
+            }
+            return false;
+        }
         
         public static void ReleaseExcelObject(object obj)
         {
