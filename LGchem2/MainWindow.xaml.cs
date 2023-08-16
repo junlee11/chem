@@ -444,7 +444,15 @@ namespace LGchem2
 
         private void btn_result_Click(object sender, RoutedEventArgs e)
         {
-            Process.Start(result_path);
+            try
+            {
+                Process.Start(result_path);
+            }
+            catch
+            {
+
+            }
+            
         }
 
         private void btn_workFolderSelect_Click(object sender, RoutedEventArgs e)
