@@ -135,6 +135,12 @@ namespace LGchem2
 
         private void btn_select_pdf_Click(object sender, RoutedEventArgs e)
         {
+            if (this.tb_workFolder.Text == "")
+            {
+                MessageBox.Show("작업폴더가 설정되지 않았습니다.");
+                return;
+            }
+
             //PDF 선택
             OpenFileDialog ofdlg = new OpenFileDialog();
             {
@@ -179,6 +185,12 @@ namespace LGchem2
 
         private void btn_run_Click(object sender, RoutedEventArgs e)
         {
+            if (this.tb_workFolder.Text == "")
+            {
+                MessageBox.Show("작업 폴더가 설정되지 않았습니다.");
+                return;
+            }
+
             //인터락
             if (this.list_pdf.Items.Count == 0)
             {
