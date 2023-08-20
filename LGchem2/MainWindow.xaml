@@ -55,6 +55,17 @@
                                     </Button.Effect>
                                 </Button>
 
+                                <Button x:Name="btn_reset" Content="초기화" 
+                                        Margin="20 0 0 0" Width="100" Height="25"                      
+                                        Background="Ivory"        
+                                        HorizontalAlignment="Left"   
+                                        Click="btn_reset_Click"                        
+                                        UseLayoutRounding="True">
+                                    <Button.Effect>
+                                        <DropShadowEffect ShadowDepth="2" Direction="315" Color="Black" Opacity="0.5"/>
+                                    </Button.Effect>
+                                </Button>
+
                                 <Button x:Name="btn_result_open" Content="결과 파일 열기" 
                                         Margin="20 0 0 0" Width="100" Height="25"                      
                                         Background="Ivory"        
@@ -65,12 +76,13 @@
                                         <DropShadowEffect ShadowDepth="2" Direction="315" Color="Black" Opacity="0.5"/>
                                     </Button.Effect>
                                 </Button>
-                                <TextBox x:Name="tb_result_path" Width="430" VerticalContentAlignment="Center" FontSize="14" Margin="10 0 0 0"/>
+                                
+                                <TextBox x:Name="tb_result_path" Width="310" VerticalContentAlignment="Center" FontSize="14" Margin="10 0 0 0"/>
                             </StackPanel>
 
                             <StackPanel Orientation="Horizontal">
                                 <Grid Margin="5 10 0 0">
-                                    <ProgressBar x:Name="pgb_run" Width="875" Height="25" Minimum="0" Maximum="100" Value="{Binding val, UpdateSourceTrigger=PropertyChanged}" 
+                                    <ProgressBar x:Name="pgb_run" Width="870" Height="25" Minimum="0" Maximum="100" Value="{Binding val, UpdateSourceTrigger=PropertyChanged}" 
                                                  HorizontalAlignment="Left" IsIndeterminate="{Binding isindertate, UpdateSourceTrigger=PropertyChanged}"/>
                                     <TextBlock x:Name="pgb_text" HorizontalAlignment="Center" Margin="5 0 0 0"
                                        Text="{Binding str, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center"/>
@@ -86,9 +98,14 @@
                             </StackPanel>
 
                             <StackPanel Orientation="Horizontal">
+                                <Label Name="lb_time" Content="소요시간" Width="100" Margin="5 6 0 0"/>
+                                <CheckBox x:Name="chk_pdf_ole" Content="PDF 삽입 여부(미체크시 속도 빨라짐)" Margin="30 10 0 0" IsChecked="True"/>                                
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal">
                                 <Grid HorizontalAlignment="Stretch">
-                                    <ListView Name="list_pdf" Margin="5 10 10 0" ItemsSource="{Binding}"
-                                              SelectionMode="Extended" Width="900" Height="660" 
+                                    <ListView Name="list_pdf" Margin="5 5 10 0" ItemsSource="{Binding}"
+                                              SelectionMode="Extended" Width="900" Height="635" 
                                               FontSize="14"
                                               KeyDown="list_pdf_KeyDown"
                                               AllowDrop="True"

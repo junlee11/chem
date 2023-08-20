@@ -464,8 +464,8 @@ namespace LGchem2
                 if (dt_imp.Rows[dt_imp.Rows.Count - 1][i].ToString() != "")
                 {
                     double idx = Double.Parse(dt_imp.Rows[dt_imp.Rows.Count - 1][i].ToString());
-                    double? val = Global.VlookupDt(dt_raw, idx, "Index", item);
-                    new_dr[i] = Math.Round(double.Parse(val.ToString()), 3);
+                    double? val = Global.VlookupDt(dt_raw, idx, "Index", item);                    
+                    new_dr[i] = (item == "RRT") ? Math.Round(double.Parse(val.ToString()), 4) : double.Parse(val.ToString());
                 }
                 else new_dr[i] = "";                
             }

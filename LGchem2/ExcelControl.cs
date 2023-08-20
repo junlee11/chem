@@ -26,6 +26,54 @@ namespace LGchem2
             spcOut, spcIn, lclOut, nospc
         }
 
+        public void DataTableToExcelQuick(DataTable dt, Workbook workBook, string sheetName, int cell_row, int cell_col, Spec spec, string pdf_path = null)
+        {
+            if (dt == null) return;            
+                      
+            Worksheet worksheet = workBook.Worksheets.Item[sheetName];
+            worksheet.Columns[1].ColumnWidth = 13;
+
+            //파일명
+            if (pdf_path != null)
+                worksheet.Cells[cell_row, cell_col] = Path.GetFileName(pdf_path);
+
+            if (sheetName == "SPC")
+                worksheet.Columns[2].AutoFit();
+
+            cell_row++;
+
+            //RRT 테이블 Peak 스펙인아웃 판정
+            if (spec == Spec.spcOut && pdf_path == null)
+            {
+                worksheet.Cells[cell_row, cell_col].Offset[5, 1].Font.ColorIndex = 3;
+            }
+            else if (spec == Spec.lclOut && pdf_path == null)
+            {
+                worksheet.Cells[cell_row, cell_col].Cells.Offset[5, 1].Font.ColorIndex = 5;
+            }
+
+            Range rng = worksheet.Range[worksheet.Cells[cell_row, cell_col], worksheet.Cells[cell_row + dt.Rows.Count, cell_col + dt.Columns.Count - 1]];
+
+            //칼럼부터
+            for (int j = 0; j < dt.Columns.Count; j++)
+            {
+                worksheet.Cells[cell_row, cell_col + j] = dt.Columns[j].ColumnName;
+            }
+            cell_row++;
+
+            for (int i = 0; i < dt.Rows.Count; i++)
+            {
+                for (int j = 0; j < dt.Columns.Count; j++)
+                {
+                    worksheet.Cells[cell_row + i, cell_col + j] = dt.Rows[i][j].ToString();
+                }
+            }
+
+            this.RangeBorder(rng);
+            //if (pdf_path != null) this.ExcelInsertOLE(worksheet, pdf_path, cell_row - 2);
+            workBook.Worksheets[1].Activate();
+        }
+
         public void DataTableToExcel(DataTable dt, string path, string sheetName, int cell_row, int cell_col, Spec spec, string pdf_path = null)
         {
             if (dt == null) return;
@@ -153,6 +201,33 @@ namespace LGchem2
             Workbook workBook = null;
             try
             {                
+                excel.Workbooks.Add();
+                workBook = excel.ActiveWorkbook;
+                Excel.Worksheet sheet = workBook.ActiveSheet;
+
+                //sheet.Cells[1, 1] = path;
+                workBook.SaveAs(path);
+                workBook.Close();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+            }
+            finally
+            {
+                excel.Quit();        // 엑셀 어플리케이션 종료
+                //오브젝트 해제
+                Global.ReleaseExcelObject(workBook);
+                Global.ReleaseExcelObject(excel);
+            }
+        }
+
+        public void SaveExcelFileQuick(string path)
+        {
+            Excel.Application excel = new Excel.Application();
+            Workbook workBook = null;
+            try
+            {
                 excel.Workbooks.Add();
                 workBook = excel.ActiveWorkbook;
                 Excel.Worksheet sheet = workBook.ActiveSheet;
