@@ -31,8 +31,7 @@ namespace LGchem2
         {   
             DataTable dt_rst = new DataTable();            
             Aspose.Pdf.Document pdfDocument = new Aspose.Pdf.Document(path);
-
-            //Debug.WriteLine(pdfDocument.Pages.Count);
+            
             foreach (var page in pdfDocument.Pages)
             {
                 Aspose.Pdf.Text.TableAbsorber absorber = new Aspose.Pdf.Text.TableAbsorber();
@@ -68,9 +67,9 @@ namespace LGchem2
                     }                    
                 }
             }
-            
-            //빈열 제거
-            dt_rst = Global.DelEmptyColumn(dt_rst);            
+
+            //빈열 제거            
+            dt_rst = Global.DelEmptyColumn(dt_rst);
 
             //결측행 제거
             dt_rst = Global.DelLittleRow(dt_rst, 1);
@@ -181,6 +180,8 @@ namespace LGchem2
         {
             DataTable dt = itable.Extract_Table(path);
 
+            if (dt == null) return null;
+
             //double형으로 변환
             dt = this.ConverDoubleTable(dt);
 
@@ -226,8 +227,8 @@ namespace LGchem2
 
             DataTable dt_imp = dt_ref_raw.Clone();
             DataRow dr_imp = dt_imp.NewRow();
-            dt_imp.Rows.Add(dr_imp);     
-            
+            dt_imp.Rows.Add(dr_imp);
+
             /* 불순물 알고리즘
              * 0. 표 생성 : dt_absChk표를 만듬 
              *  - 임퓨리티 칼럼을 가지고 인덱스별로 Ref RRT - 인덱스 RRT의 차이가 limit이내인 값만 남겨서 표를 남김
@@ -296,11 +297,6 @@ namespace LGchem2
             {
                 string idx_str = dr[0].ToString();
                 if (Global.ChkValInDataRow(dt_imp, 0, dr[0].ToString())) continue;
-
-                if (dr[0].ToString() == "16")
-                {
-                    Debug.WriteLine("good");
-                }
 
                 int row_cnt = 0;
                 int col_idx = 0;
@@ -384,7 +380,7 @@ namespace LGchem2
                     }
                 }
                 
-                if (row_cnt == 2)
+                if (row_cnt >= 2)
                 {
                     //한 행에 두개, 그런데 이미 있는 인덱스는 빼야함
                     //중복불순물

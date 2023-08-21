@@ -1,4 +1,5 @@
 ﻿using Aspose.Pdf;
+using javax.swing.@event;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -46,8 +47,7 @@ namespace LGchem2
                             }
                             if (value.Contains(','))
                             {
-                                value = String.Format("\"{0}\"", value);
-                                Debug.WriteLine(value);
+                                value = String.Format("\"{0}\"", value);                                
                                 sw.Write(value);
                             }
                             else
@@ -177,14 +177,64 @@ namespace LGchem2
             dc.SetOrdinal(idx);
         }
 
+        public static DataTable RemoveUnusedColumnsAndRows(DataTable table)
+        {
+            for (int h = 0; h < table.Rows.Count; h++)
+            {
+                if (table.Rows[h].IsNull(0) == true)
+                {
+                    table.Rows[h].Delete();
+                }                
+            }
+            table.AcceptChanges();
+            foreach (var column in table.Columns.Cast<DataColumn>().ToArray())
+            {
+                if (table.AsEnumerable().All(dr => dr.IsNull(column)))
+                    table.Columns.Remove(column);
+            }
+            table.AcceptChanges();
+            return table;
+        }
+
+        public static bool NullInList(List<string> lst)
+        {
+            foreach (var item in lst)
+            {
+                if (item == null) return true;
+            }
+            return false;
+        }
+
+        public static bool EmptyInList(List<string> lst)
+        {
+            foreach (var item in lst)
+            {
+                if (item == "") return true;
+            }
+            return false;
+        }
+
         public static DataTable DelEmptyColumn(DataTable dt)
         {
             foreach (var column in dt.Columns.Cast<DataColumn>().ToArray())
-            {
-                if (dt.AsEnumerable().All(dr => dr.IsNull(column)))
-                //if (dt.AsEnumerable().All(dr => dr.ToString().Trim() == ""))
+            {                
+                List<string> list_chk = dt.AsEnumerable().Select(dr => dr.Field<string>(column)).Distinct().ToList();
+
+                bool all_null = (list_chk.Count == 1) && Global.NullInList(list_chk);
+                bool all_empty = (list_chk.Count == 1) && Global.EmptyInList(list_chk);
+                bool all_null_empty = (list_chk.Count == 2) && Global.NullInList(list_chk) && Global.EmptyInList(list_chk);
+
+                if (all_null || all_empty || all_null_empty)
                     dt.Columns.Remove(column);
             }
+                
+
+            //foreach (var column in dt.Columns.Cast<DataColumn>().ToArray())
+            //{
+            //    if (dt.AsEnumerable().All(dr => dr.IsNull(column)))                
+            //    //if (dt.AsEnumerable().All(dr => dr.ToString().Trim() == ""))
+            //        dt.Columns.Remove(column);
+            //}
 
             return dt;
         }
